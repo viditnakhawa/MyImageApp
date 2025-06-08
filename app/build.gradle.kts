@@ -68,11 +68,15 @@ dependencies {
     implementation ("androidx.navigation:navigation-compose:2.7.4")
     implementation ("androidx.compose.foundation:foundation:1.6.1")
     implementation ("androidx.compose.material3:material3-window-size-class:1.1.2")
-    val camerax_version = "1.3.0" // Check for the latest version, e.g., "1.3.3" or "1.4.0-alpha01"
+    val camerax_version = "1.4.2"
     implementation ("androidx.camera:camera-core:${camerax_version}")
     implementation ("androidx.camera:camera-camera2:${camerax_version}")
     implementation ("androidx.camera:camera-lifecycle:${camerax_version}")
     implementation ("androidx.camera:camera-view:${camerax_version}")
+
+    implementation("com.google.accompanist:accompanist-permissions:0.34.0")
+    implementation("androidx.compose.ui:ui-tooling-preview")
+    debugImplementation("androidx.compose.ui:ui-tooling")
 
     implementation ("androidx.appcompat:appcompat:1.6.1") // Or the latest version
     // Other dependencies like material design, constraint layout etc.
@@ -88,5 +92,6 @@ dependencies {
     implementation ("androidx.compose.material:material-icons-extended:1.6.8")
 
     implementation("com.google.ai.edge.aicore:aicore:0.0.1-exp01")
+    implementation("com.google.mlkit:genai-image-description:1.0.0-beta1")
 
 }

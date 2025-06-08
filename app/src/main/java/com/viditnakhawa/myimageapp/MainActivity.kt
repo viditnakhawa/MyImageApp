@@ -38,23 +38,16 @@ class MainActivity : ComponentActivity() {
                 var analysisDetails by remember { mutableStateOf<PostDetails?>(null) }
                 val scope = rememberCoroutineScope()
 
-                // State to track if the AI model is ready and if we are currently processing.
                 var isLoading by remember { mutableStateOf(true) } // Start loading initially
                 var isModelReady by remember { mutableStateOf(false) }
+                var showCamera by remember { mutableStateOf(false) } // State to control camera visibility
 
-                // LAUNCHERS - These were missing. Adding them back fixes the error.
-                val takePictureLauncher = rememberLauncherForActivityResult(
-                    contract = ActivityResultContracts.StartActivityForResult()
-                ) { result ->
-                    if (result.resultCode == RESULT_OK) {
-                        result.data?.data?.let { images.add(it) }
-                    }
-                }
 
+                // LAUNCHERS
                 val pickImageLauncher = rememberLauncherForActivityResult(
                     contract = ActivityResultContracts.GetContent()
                 ) { uri: Uri? ->
-                    uri?.let { images.add(it) }
+                    uri?.let { images.add(0, it) } // Add new images to the top
                 }
 
 
@@ -76,6 +69,19 @@ class MainActivity : ComponentActivity() {
                 Box(modifier = Modifier.fillMaxSize()) {
                     // UI NAVIGATION LOGIC
                     when {
+                        // If showCamera is true, display the new Composable camera
+                        showCamera -> {
+                            ComposeCameraScreen(
+                                onImageCaptured = { uri ->
+                                    images.add(0, uri) // Add to the top of the list
+                                    showCamera = false // Go back to the gallery
+                                },
+                                onClose = {
+                                    showCamera = false // Go back to the gallery
+                                }
+                            )
+                        }
+
                         // If we have analysis results, show the AnalysisScreen
                         analysisDetails != null && selectedImageUri != null -> {
                             AnalysisScreen(
@@ -93,11 +99,8 @@ class MainActivity : ComponentActivity() {
                             ScreenshotGalleryScreenWithFAB(
                                 images = images,
                                 onAddCollectionClick = { /* TODO */ },
-                                onCapturePhotoClick = {
-                                    val intent = Intent(this@MainActivity, CameraCapture::class.java)
-                                    takePictureLauncher.launch(intent)
-                                },
-                                onPickFromGalleryClick = { pickImageLauncher.launch("image/*") },
+                                onCapturePhotoClick = { showCamera = true }, // Set state to true
+                                onPickFromGalleryClick = { pickImageLauncher.launch("image/*") }, // CORRECTED: Use the existing launcher
                                 // AUTO-PROCESS LOGIC IS NOW HERE
                                 onImageClick = { uri ->
                                     // Prevent analysis if the model isn't ready yet.
