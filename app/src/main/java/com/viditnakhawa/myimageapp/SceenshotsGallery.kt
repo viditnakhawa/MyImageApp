@@ -1,6 +1,3 @@
-// Replace the contents of your gallery screen file with this
-// (I recommend renaming the file from SceenshotsGallery.kt to ScreenshotGalleryScreen.kt)
-
 import android.net.Uri
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
@@ -19,7 +16,6 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.unit.dp
 import coil.compose.AsyncImage
 
-// The composable is now much simpler
 @Composable
 fun ScreenshotGalleryScreenWithFAB(
     images: List<Uri>,
@@ -95,7 +91,7 @@ fun ScreenshotGalleryScreenWithFAB(
                         modifier = Modifier
                             .aspectRatio(1f)
                             .clip(RoundedCornerShape(12.dp))
-                            // This now calls the hoisted function
+                        
                             .clickable { onImageClick(imageUri) }
                     )
                 }
