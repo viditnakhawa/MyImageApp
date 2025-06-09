@@ -91,7 +91,7 @@ dependencies {
     implementation ("androidx.compose.material:material-icons-core:1.6.8")
     implementation ("androidx.compose.material:material-icons-extended:1.6.8")
 
-    implementation("com.google.ai.edge.aicore:aicore:0.0.1-exp01")
+    //implementation("com.google.ai.edge.aicore:aicore:0.0.1-exp01")
     implementation("com.google.mlkit:genai-image-description:1.0.0-beta1")
-
+    implementation ("com.google.mlkit:image-description:16.0.0")
 }
