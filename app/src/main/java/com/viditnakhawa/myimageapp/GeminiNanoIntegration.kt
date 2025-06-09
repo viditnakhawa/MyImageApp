@@ -1,6 +1,11 @@
 package com.viditnakhawa.myimageapp
 
-import com.google.ai.edge.aicore.GenerativeModel
+/*----------------------------------------------------------------------------------------------
+   |Currently, this is halted as AI CORE in Pixel 9 is not responding,                         |
+   |as the this app gives an error saying "Error: On-device model not initialized"             |
+---------------------------------------------------------------------------------------------*/
+
+/*import com.google.ai.edge.aicore.GenerativeModel
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 
@@ -72,3 +77,4 @@ object GeminiNanoIntegration {
         )
     }
 }
+*/
