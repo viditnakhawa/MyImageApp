@@ -1,5 +1,3 @@
-// ImageDetailScreen.kt
-
 import android.net.Uri
 import androidx.compose.foundation.layout.*
 import androidx.compose.material.icons.Icons
