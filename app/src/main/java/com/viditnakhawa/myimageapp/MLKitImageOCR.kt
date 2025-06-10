@@ -7,27 +7,27 @@ import com.google.mlkit.vision.common.InputImage
 import com.google.mlkit.vision.text.TextRecognition
 import com.google.mlkit.vision.text.latin.TextRecognizerOptions
 import java.io.IOException
+import kotlin.coroutines.resume
+import kotlin.coroutines.resumeWithException
+import kotlin.coroutines.suspendCoroutine
 
-fun processImageWithOCR(
-    context: Context,
-    uri: Uri,
-    onResult: (String) -> Unit
-) {
+//SUSPEND FUNCTION for easier use in coroutines.
+suspend fun processImageWithOCR(context: Context, uri: Uri): String = suspendCoroutine {
+    continuation ->
     try {
         val image = InputImage.fromFilePath(context, uri)
         val recognizer = TextRecognition.getClient(TextRecognizerOptions.DEFAULT_OPTIONS)
 
         recognizer.process(image)
             .addOnSuccessListener { visionText ->
-                val resultText = visionText.text
-                onResult(resultText)
+                continuation.resume(visionText.text)
             }
             .addOnFailureListener { e ->
-                onResult("Error: ${e.message}")
                 Log.e("MLKitOCR", "Text recognition failed", e)
+                continuation.resume("Error: ${e.message}")
             }
     } catch (e: IOException) {
         e.printStackTrace()
-        onResult("Failed to load image: ${e.message}")
+        continuation.resume("Failed to load image: ${e.message}")
     }
 }
