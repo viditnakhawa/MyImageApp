@@ -1,3 +1,5 @@
+package com.viditnakhawa.myimageapp.ui
+
 import android.net.Uri
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
@@ -17,7 +19,7 @@ import androidx.compose.ui.unit.dp
 import coil.compose.AsyncImage
 
 @Composable
-fun ScreenshotGalleryScreenWithFAB(
+fun ScreenshotsGalleryScreenWithFAB(
     images: List<Uri>,
     onAddCollectionClick: () -> Unit,
     onCapturePhotoClick: () -> Unit,
@@ -91,7 +93,7 @@ fun ScreenshotGalleryScreenWithFAB(
                         modifier = Modifier
                             .aspectRatio(1f)
                             .clip(RoundedCornerShape(12.dp))
-                        
+
                             .clickable { onImageClick(imageUri) }
                     )
                 }
