@@ -178,7 +178,7 @@ fun ComposeCameraScreen(
 
 @Composable
 private fun ZoomControls(currentZoom: Float, onZoomChange: (Float) -> Unit) {
-    val zoomLevels = listOf(1f, 2f, 5f)
+    val zoomLevels = listOf(1f, 2f, 3f, 5f)
     Card(
         shape = CircleShape,
         colors = CardDefaults.cardColors(containerColor = Color.Black.copy(alpha = 0.5f))
