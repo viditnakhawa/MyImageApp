@@ -12,6 +12,7 @@ import androidx.compose.runtime.*
 import androidx.lifecycle.lifecycleScope
 import com.viditnakhawa.myimageapp.ui.AnalysisScreen
 import com.viditnakhawa.myimageapp.ui.ImageViewModel
+import com.viditnakhawa.myimageapp.ui.ModelManagerScreen
 import com.viditnakhawa.myimageapp.ui.ScreenshotsGalleryScreenWithFAB
 import com.viditnakhawa.myimageapp.ui.theme.MyImageAppTheme
 import kotlinx.coroutines.launch
@@ -50,7 +51,6 @@ class MainActivity : ComponentActivity() {
             is Screen.Gallery -> {
                 ScreenshotsGalleryScreenWithFAB(
                     images = imageList,
-                    // FIX: Added the missing onAddCollectionClick parameter
                     onAddCollectionClick = { /* TODO: Implement create collection logic */ },
                     onCapturePhotoClick = { currentScreen = Screen.Camera },
                     onPickFromGalleryClick = {
@@ -63,12 +63,25 @@ class MainActivity : ComponentActivity() {
                     onImageClick = { uri: Uri ->
                         selectedImageUri = uri
                         currentScreen = Screen.Detail
+                    },
+                    // This now correctly passes the navigation event to the gallery screen
+                    onManageModelClick = {
+                        currentScreen = Screen.ModelManager
                     }
                 )
             }
             is Screen.Camera -> {
-                // This function is missing from your provided code, assuming it exists elsewhere
-                // ComposeCameraScreen( ... )
+                ComposeCameraScreen(
+                    onImageCaptured = { uri ->
+                        // When an image is captured, add it to the view model and go back to the gallery.
+                        viewModel.addImage(uri)
+                        currentScreen = Screen.Gallery
+                    },
+                    onClose = {
+                        // If the user closes the camera, go back to the gallery.
+                        currentScreen = Screen.Gallery
+                    }
+                )
             }
             is Screen.Detail -> {
                 selectedImageUri?.let { uri ->
@@ -83,18 +96,14 @@ class MainActivity : ComponentActivity() {
                         },
                         onRecognizeText = { imageUri ->
                             lifecycleScope.launch {
-                                // This function is missing, assuming it exists elsewhere
                                 val text = processImageWithOCR(applicationContext, imageUri)
-                                //val text = "OCR processing..." // Placeholder
                                 analysisResult = PostDetails(title = "Text Recognition (OCR)", content = text)
                                 currentScreen = Screen.Analysis
                             }
                         },
                         onDescribeImage = { imageUri ->
                             lifecycleScope.launch {
-                                // This function is missing, assuming it exists elsewhere
                                 val result = MLKitImgDescProcessor.describeImage(applicationContext, imageUri)
-                                //val result = PostDetails(title="Image Description", content = "Description processing...") // Placeholder
                                 analysisResult = result
                                 currentScreen = Screen.Analysis
                             }
@@ -111,6 +120,12 @@ class MainActivity : ComponentActivity() {
                     )
                 }
             }
+            // This block handles displaying the new ModelManagerScreen
+            is Screen.ModelManager -> {
+                // Make sure you have created the ModelManagerScreen.kt file
+                // and all its dependencies from the GemmaModel Codes.docx
+                ModelManagerScreen(onClose = { currentScreen = Screen.Gallery })
+            }
         }
     }
 
@@ -119,5 +134,6 @@ class MainActivity : ComponentActivity() {
         object Camera : Screen()
         object Detail : Screen()
         object Analysis : Screen()
+        object ModelManager : Screen() // Add this
     }
 }

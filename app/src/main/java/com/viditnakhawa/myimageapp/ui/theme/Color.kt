@@ -2,10 +2,18 @@ package com.viditnakhawa.myimageapp.ui.theme
 
 import androidx.compose.ui.graphics.Color
 
-val Purple80 = Color(0xFFD0BCFF)
-val PurpleGrey80 = Color(0xFFCCC2DC)
-val Pink80 = Color(0xFFEFB8C8)
+val primaryLight = Color(0xFF1F1F1F)
+val onPrimaryLight = Color(0xFFFFFFFF)
+val secondaryContainerLight = Color(0xFFC2E7FF)
+val backgroundLight = Color(0xFFF8F9FF)
+val surfaceLight = Color(0xFFF8F9FF)
+val surfaceVariantLight = Color(0xFFDEE3EB)
+val outlineLight = Color(0xFF73777F)
 
-val Purple40 = Color(0xFF6650a4)
-val PurpleGrey40 = Color(0xFF625b71)
-val Pink40 = Color(0xFF7D5260)
+val primaryDark = Color(0xFF9DCAFC)
+val onPrimaryDark = Color(0xFF003355)
+val secondaryContainerDark = Color(0xFF3B4857)
+val backgroundDark = Color(0xFF101418)
+val surfaceDark = Color(0xFF101418)
+val surfaceVariantDark = Color(0xFF42474E)
+val outlineDark = Color(0xFF8C9199)
