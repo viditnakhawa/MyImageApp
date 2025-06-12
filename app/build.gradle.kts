@@ -2,6 +2,8 @@ plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.android)
     alias(libs.plugins.kotlin.compose)
+    id("com.google.devtools.ksp")
+    id("androidx.room")
 }
 
 android {
@@ -38,6 +40,9 @@ android {
         jvmTarget = "11"
     }
 
+    room {
+        schemaDirectory("$projectDir/schemas")
+    }
 
     buildFeatures {
         compose = true
@@ -132,5 +137,10 @@ dependencies {
     implementation("com.google.mediapipe:tasks-genai:0.10.24")
     implementation("org.tensorflow:tensorflow-lite:2.13.0")
     //implementation(libs.androidx.lifecycle.process)
+    ksp("androidx.room:room-compiler:2.5.0")
+
+    val room_version = "2.7.1"
+    ksp("androidx.room:room-compiler:$room_version")
+    implementation("androidx.room:room-ktx:$room_version")
 
 }
