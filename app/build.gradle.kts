@@ -128,7 +128,9 @@ dependencies {
     implementation("androidx.datastore:datastore-preferences:1.1.1")
     implementation("net.openid:appauth:0.11.1")
     implementation("com.google.code.gson:gson:2.10.1")
-    implementation("androidx.lifecycle:lifecycle-process:2.6.2")
-
+    implementation("androidx.lifecycle:lifecycle-process:2.9.1")
+    implementation("com.google.mediapipe:tasks-genai:0.10.24")
+    implementation("org.tensorflow:tensorflow-lite:2.13.0")
     //implementation(libs.androidx.lifecycle.process)
+
 }

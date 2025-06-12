@@ -1,3 +1,6 @@
+rootProject.name = "MyImageApp"
+include(":app")
+
 pluginManagement {
     repositories {
         google {
@@ -18,7 +21,3 @@ dependencyResolutionManagement {
         mavenCentral()
     }
 }
-
-rootProject.name = "MyImageApp"
-include(":app")
- 
