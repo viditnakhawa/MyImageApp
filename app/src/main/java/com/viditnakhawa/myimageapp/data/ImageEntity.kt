@@ -10,6 +10,10 @@ import androidx.room.PrimaryKey
 @Entity(tableName = "images")
 data class ImageEntity(
     @PrimaryKey val imageUri: String,
-    // Add a new nullable field for the summary
-    val aiSummary: String? = null
+    // Add a field for the AI-generated title
+    var title: String? = null,
+    // Add a field for the AI-generated tags
+    var tags: List<String>? = null,
+    // We can rename aiSummary to content to be more generic
+    var content: String? = null
 )
