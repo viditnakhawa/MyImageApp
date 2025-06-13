@@ -12,12 +12,14 @@ import androidx.core.app.NotificationManagerCompat
 import androidx.work.*
 import com.viditnakhawa.myimageapp.R
 import com.viditnakhawa.myimageapp.workers.DownloadWorker
+import java.io.File
 import java.util.UUID
 
 interface DownloadRepository {
     fun downloadModel(model: Model, onStatusUpdated: (model: Model, status: ModelDownloadStatus) -> Unit)
     // Other methods can be added later
-    fun cancelDownload(model: Model)
+    fun cancelDownload(model: Model) //This just pauses the work, as it keeps the part file
+    fun deleteDownload(model: Model) //This deletes the part file
 }
 
 class DefaultDownloadRepository(
@@ -46,9 +48,23 @@ class DefaultDownloadRepository(
         observerWorkerProgress(downloadWorkRequest.id, model, onStatusUpdated)
     }
 
+    //This function just pauses the work, as it keeps the part file
     override fun cancelDownload(model: Model) {
         // Use the same unique name to cancel the specific work.
         workManager.cancelUniqueWork(model.name)
+    }
+
+    override fun deleteDownload(model: Model) {
+        // First, cancel the background worker using its unique name.
+        workManager.cancelUniqueWork(model.name)
+
+        // Next, get the path where the file is being saved.
+        val file = File(model.getPath(context))
+
+        // If the partial file exists, delete it.
+        if (file.exists()) {
+            file.delete()
+        }
     }
 
     private fun observerWorkerProgress(

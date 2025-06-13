@@ -14,7 +14,7 @@ val GEMMA_E2B_MODEL = Model(
     sizeInBytes = 3136226711,
     url = "https://huggingface.co/google/gemma-3n-E2B-it-litert-preview/resolve/main/gemma-3n-E2B-it-int4.task?download=true",
     downloadFileName = "gemma-3n-E2B-it-int4.task",
-    learnMoreUrl = "https://huggingface.co/google/gemma-3n-E2B-it-litert-preview",
+    learnMoreUrl = "https://huggingface.co/google/gemma-3n-E4B-it-litert-preview",
     description = "Preview version of Gemma 3n E2B ready for deployment on Android.",
     // These configs are essential for the model to run correctly
     configs = createLlmChatConfigs(

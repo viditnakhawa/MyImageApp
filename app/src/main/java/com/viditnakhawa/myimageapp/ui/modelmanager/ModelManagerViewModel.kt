@@ -124,6 +124,11 @@ class ModelManagerViewModel(
         downloadRepository.cancelDownload(model)
     }
 
+    fun deleteDownload(model: Model) {
+        // This function will tell the repository to delete the download for the given model.
+        downloadRepository.deleteDownload(model)
+    }
+
     fun initializeModel(context: Context, model: Model) {
         Log.d("ModelManagerViewModel", "Initializing model: ${model.name}")
         updateModelInitializationStatus(model, ModelInitializationStatusType.INITIALIZING)

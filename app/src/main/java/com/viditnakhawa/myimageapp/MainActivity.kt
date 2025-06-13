@@ -45,6 +45,13 @@ import com.google.accompanist.permissions.ExperimentalPermissionsApi
 import com.google.accompanist.permissions.isGranted
 import com.google.accompanist.permissions.rememberPermissionState
 import androidx.activity.result.PickVisualMediaRequest
+import androidx.compose.animation.AnimatedContent
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.slideInHorizontally
+import androidx.compose.animation.slideOutHorizontally
+import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.CircleShape
@@ -140,6 +147,19 @@ class MainActivity : ComponentActivity() {
             }
         }
 
+        // --- IMPROVED BACK NAVIGATION ---
+        // This BackHandler will manage back presses for the entire app.
+        BackHandler(enabled = currentScreen != Screen.Gallery) {
+            when (currentScreen) {
+                is Screen.Analysis -> currentScreen = Screen.Gallery
+                is Screen.FullScreenViewer -> currentScreen = Screen.Analysis
+                is Screen.ModelManager -> currentScreen = Screen.Gallery
+                else -> { /* No action needed for Gallery */ }
+            }
+        }
+        // --- ANIMATED NAVIGATION ---
+        // AnimatedContent will handle the transitions between screens.
+
         when (currentScreen) {
             is Screen.Gallery -> {
                 ScreenshotsGalleryScreenWithFAB(
@@ -193,7 +213,16 @@ class MainActivity : ComponentActivity() {
                         onClose = { currentScreen = Screen.Gallery },
                         // When the image itself is tapped, go to the full-screen viewer
                         onAddToCollection = {/*TODO*/},
-                        onShare = {/*TODO*/},
+                        onShare = { uri ->
+                            // --- SHARE LOGIC IMPLEMENTED HERE ---
+                            val shareIntent: Intent = Intent().apply {
+                                action = Intent.ACTION_SEND
+                                putExtra(Intent.EXTRA_STREAM, uri)
+                                type = "image/jpeg"
+                                addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+                            }
+                            startActivity(Intent.createChooser(shareIntent, "Share Image"))
+                        },
                         onDelete = {
                             viewModel.removeImage(it)
                             currentScreen = Screen.Gallery
