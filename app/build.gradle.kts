@@ -143,4 +143,7 @@ dependencies {
     ksp("androidx.room:room-compiler:$room_version")
     implementation("androidx.room:room-ktx:$room_version")
 
+    implementation("androidx.compose.animation:animation:1.6.1")
+    implementation("androidx.compose.ui:ui:1.6.1")
+
 }
