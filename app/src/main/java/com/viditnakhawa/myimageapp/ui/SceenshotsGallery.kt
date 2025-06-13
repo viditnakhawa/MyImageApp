@@ -147,7 +147,7 @@ fun ScreenshotsGalleryScreenWithFAB(
                 verticalArrangement = Arrangement.spacedBy(8.dp),
                 horizontalArrangement = Arrangement.spacedBy(8.dp)
             ) {
-                items(items = images, key = { imageUri -> imageUri.toString() }) { imageUri ->
+                items(items = images, key = { it.toString() }) { imageUri ->
                     AsyncImage(
                         model = ImageRequest.Builder(LocalContext.current)
                             .data(imageUri)
