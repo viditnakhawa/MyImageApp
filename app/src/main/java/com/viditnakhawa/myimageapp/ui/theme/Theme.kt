@@ -9,8 +9,8 @@ import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.platform.LocalView
 import androidx.core.view.WindowCompat
 
-// --- Theme definition ---
-private val lightScheme = lightColorScheme(
+// --- Color Schemes using your custom colors ---
+private val LightColorScheme = lightColorScheme(
     primary = primaryLight,
     onPrimary = onPrimaryLight,
     secondaryContainer = secondaryContainerLight,
@@ -20,7 +20,7 @@ private val lightScheme = lightColorScheme(
     outline = outlineLight,
 )
 
-private val darkScheme = darkColorScheme(
+private val DarkColorScheme = darkColorScheme(
     primary = primaryDark,
     onPrimary = onPrimaryDark,
     secondaryContainer = secondaryContainerDark,
@@ -30,6 +30,7 @@ private val darkScheme = darkColorScheme(
     outline = outlineDark,
 )
 
+// --- Custom Colors for specific UI elements ---
 @Immutable
 data class CustomColors(
     val taskBgColors: List<Color> = listOf(),
@@ -38,14 +39,13 @@ data class CustomColors(
 
 val LocalCustomColors = staticCompositionLocalOf { CustomColors() }
 
-val lightCustomColors = CustomColors(
+private val lightCustomColors = CustomColors(
     taskBgColors = listOf(
         Color(0xFFE1F6DE), // green
         Color(0xFFEDF0FF), // blue
         Color(0xFFFFEFC9), // yellow
         Color(0xFFFFEDE6), // red
     ),
-
     taskIconColors = listOf(
         Color(0xFF34A853),
         Color(0xFF1967D2),
@@ -54,7 +54,7 @@ val lightCustomColors = CustomColors(
     )
 )
 
-val darkCustomColors = CustomColors(
+private val darkCustomColors = CustomColors(
     taskBgColors = listOf(
         Color(0xFF2E312D),
         Color(0xFF303033),
@@ -69,20 +69,19 @@ val darkCustomColors = CustomColors(
     )
 )
 
+// Extension property to easily access custom colors
 val MaterialTheme.customColors: CustomColors
     @Composable
     @ReadOnlyComposable
     get() = LocalCustomColors.current
 
+// --- The Main App Theme ---
 @Composable
-fun GemmaDownloaderTheme(
+fun MyImageAppTheme(
     darkTheme: Boolean = isSystemInDarkTheme(),
     content: @Composable () -> Unit
 ) {
-    val colorScheme = when {
-        darkTheme -> darkScheme
-        else -> lightScheme
-    }
+    val colorScheme = if (darkTheme) DarkColorScheme else LightColorScheme
     val customColorsPalette = if (darkTheme) darkCustomColors else lightCustomColors
 
     val view = LocalView.current
@@ -90,14 +89,14 @@ fun GemmaDownloaderTheme(
         SideEffect {
             val window = (view.context as Activity).window
             window.statusBarColor = colorScheme.primary.toArgb()
-            WindowCompat.getInsetsController(window, view).isAppearanceLightStatusBars = darkTheme
+            WindowCompat.getInsetsController(window, view).isAppearanceLightStatusBars = !darkTheme
         }
     }
 
     CompositionLocalProvider(LocalCustomColors provides customColorsPalette) {
         MaterialTheme(
             colorScheme = colorScheme,
-            typography = Typography,
+            typography = Typography, // Assuming Typography.kt exists in this package
             content = content
         )
     }
