@@ -20,6 +20,7 @@ import com.viditnakhawa.myimageapp.data.GEMMA_E2B_MODEL
 import com.viditnakhawa.myimageapp.data.ModelDownloadStatusType
 import com.viditnakhawa.myimageapp.ui.common.ViewModelProvider
 import com.viditnakhawa.myimageapp.ui.common.modelitem.ModelItem
+import com.viditnakhawa.myimageapp.ui.modelmanager.ModelInitializationStatusType
 import com.viditnakhawa.myimageapp.ui.modelmanager.ModelManagerViewModel
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -36,11 +37,14 @@ fun ModelManagerScreen(onClose: () -> Unit) {
     val downloadStatus by remember {
         derivedStateOf { uiState.modelDownloadStatus[model.name] }
     }
+    val initializationStatus by remember {
+        derivedStateOf { uiState.modelInitializationStatus[model.name] }
+    }
 
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("Gemma Model Manager") },
+                title = { Text("Gemma 3n E2B Model") },
                 navigationIcon = {
                     IconButton(onClick = onClose) {
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
@@ -58,8 +62,35 @@ fun ModelManagerScreen(onClose: () -> Unit) {
             verticalArrangement = Arrangement.Center
         ) {
             if (downloadStatus?.status == ModelDownloadStatusType.SUCCEEDED) {
-                Text("Model '${model.name}' is downloaded and ready!")
-            } else {
+                // After download, show initialization status and button
+                when (initializationStatus?.status) {
+                    ModelInitializationStatusType.INITIALIZED -> {
+                        Text("Model '${model.name}' is downloaded and ready to use!")
+                    }
+
+                    ModelInitializationStatusType.INITIALIZING -> {
+                        CircularProgressIndicator()
+                        Spacer(modifier = Modifier.height(8.dp))
+                        Text("Initializing model...")
+                    }
+
+                    ModelInitializationStatusType.ERROR -> {
+                        Text("Initialization failed: ${initializationStatus?.error}")
+                    }
+
+                    else -> { // NOT_INITIALIZED or null
+                        Button(onClick = {
+                            modelManagerViewModel.initializeModel(
+                                context,
+                                model
+                            )
+                        }) {
+                            Text("Initialize Model")
+                        }
+                    }
+                }
+            }
+            else {
                 // This is the main UI component from your GemmaModel project
                 ModelItem(
                     model = model,

@@ -22,7 +22,8 @@ fun ImageDetailScreen(
     onEdit: (Uri) -> Unit,
     onDelete: (Uri) -> Unit,
     onRecognizeText: (Uri) -> Unit, // For OCR
-    onDescribeImage: (Uri) -> Unit  // For Image Description
+    onDescribeImage: (Uri) -> Unit,  // For Image Description
+    onAnalyzeWithGemma: (Uri) -> Unit
 ) {
     Scaffold(
         topBar = {
@@ -39,6 +40,9 @@ fun ImageDetailScreen(
                     }
                     IconButton(onClick = { onDescribeImage(imageUri) }) {
                         Icon(Icons.Filled.Description, contentDescription = "Describe Image")
+                    }
+                    IconButton(onClick = { onAnalyzeWithGemma(imageUri) }) {
+                        Icon(Icons.Filled.AutoAwesome, contentDescription = "Analyze with Gemma")
                     }
                     IconButton(onClick = { onDelete(imageUri) }) {
                         Icon(Icons.Filled.Delete, contentDescription = "Delete Image")

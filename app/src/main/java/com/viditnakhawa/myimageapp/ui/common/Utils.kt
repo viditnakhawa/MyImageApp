@@ -5,17 +5,23 @@ import android.Manifest
 import android.content.Context
 import android.content.pm.PackageManager
 import android.os.Build
+import android.util.Log
 import androidx.activity.compose.ManagedActivityResultLauncher
+import androidx.activity.result.ActivityResultLauncher
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.graphics.Color
 import androidx.core.content.ContextCompat
+import com.google.gson.Gson
+import com.google.gson.reflect.TypeToken
 import com.viditnakhawa.myimageapp.data.Model
 import com.viditnakhawa.myimageapp.data.Task
 import com.viditnakhawa.myimageapp.ui.modelmanager.ModelManagerViewModel
-import com.viditnakhawa.myimageapp.ui.theme.customColors
+import java.io.File
 import kotlin.math.ln
 import kotlin.math.pow
+
+private const val LAUNCH_INFO_FILE_NAME = "launch_info"
 
 fun Long.humanReadableSize(si: Boolean = true, extraDecimalForGbAndAbove: Boolean = false): String {
     val bytes = this
@@ -46,27 +52,61 @@ fun Long.formatToHourMinSecond(): String {
 
 @Composable
 fun getTaskBgColor(task: Task): Color {
-    // Return a standard color from your theme, for example, a subtle surface variant.
     return MaterialTheme.colorScheme.surfaceVariant
 }
 
 @Composable
 fun getTaskIconColor(task: Task): Color {
-    // Return the primary color of your theme for the icon.
     return MaterialTheme.colorScheme.primary
 }
 
 fun checkNotificationPermissionAndStartDownload(
     context: Context,
-    launcher: ManagedActivityResultLauncher<String, Boolean>,
+    launcher: ActivityResultLauncher<String>,
     modelManagerViewModel: ModelManagerViewModel,
     task: Task,
     model: Model
 ) {
-    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU &&
-        ContextCompat.checkSelfPermission(context, Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED) {
-        launcher.launch(Manifest.permission.POST_NOTIFICATIONS)
+    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+        val permission = Manifest.permission.POST_NOTIFICATIONS
+        if (ContextCompat.checkSelfPermission(context, permission) == PackageManager.PERMISSION_GRANTED) {
+            // ✅ Start download immediately
+            modelManagerViewModel.downloadModel(task = task, model = model)
+        } else {
+            launcher.launch(permission)
+        }
     } else {
+        // ✅ No permission needed, start download directly
         modelManagerViewModel.downloadModel(task = task, model = model)
     }
 }
+
+data class LaunchInfo(
+    val ts: Long
+)
+
+fun writeLaunchInfo(context: Context) {
+    try {
+        val gson = Gson()
+        val launchInfo = LaunchInfo(ts = System.currentTimeMillis())
+        val jsonString = gson.toJson(launchInfo)
+        val file = File(context.getExternalFilesDir(null), LAUNCH_INFO_FILE_NAME)
+        file.writeText(jsonString)
+    } catch (e: Exception) {
+        //Log.e(TAG, "Failed to write launch info", e)
+    }
+}
+
+fun readLaunchInfo(context: Context): LaunchInfo? {
+    try {
+        val gson = Gson()
+        val type = object : TypeToken<LaunchInfo>() {}.type
+        val file = File(context.getExternalFilesDir(null), LAUNCH_INFO_FILE_NAME)
+        val content = file.readText()
+        return gson.fromJson(content, type)
+    } catch (e: Exception) {
+        //Log.e(TAG, "Failed to read launch info", e)
+        return null
+    }
+}
+

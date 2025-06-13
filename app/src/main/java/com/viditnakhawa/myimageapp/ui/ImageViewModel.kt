@@ -2,18 +2,37 @@ package com.viditnakhawa.myimageapp.ui
 
 import android.net.Uri
 import androidx.lifecycle.ViewModel
-import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.asStateFlow
+import androidx.lifecycle.viewModelScope
+import com.viditnakhawa.myimageapp.data.ImageRepository
+import kotlinx.coroutines.flow.SharingStarted
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.stateIn
+import kotlinx.coroutines.launch
 
-class ImageViewModel : ViewModel() {
-    private val _images = MutableStateFlow<List<Uri>>(emptyList())
-    val images = _images.asStateFlow()
+class ImageViewModel(private val repository: ImageRepository) : ViewModel() {
+
+    val images: StateFlow<List<Uri>> = repository.allImages
+        .stateIn(
+            scope = viewModelScope,
+            started = SharingStarted.WhileSubscribed(5000L),
+            initialValue = emptyList()
+        )
 
     fun addImage(uri: Uri) {
-        _images.value = listOf(uri) + _images.value // Add new images to the top
+        viewModelScope.launch {
+            repository.addImage(uri)
+        }
+    }
+
+    fun addImages(uris: List<Uri>) {
+        viewModelScope.launch {
+            uris.forEach { repository.addImage(it) }
+        }
     }
 
     fun removeImage(uri: Uri) {
-        _images.value = _images.value - uri
+        viewModelScope.launch {
+            repository.deleteImage(uri)
+        }
     }
 }

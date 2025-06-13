@@ -6,6 +6,7 @@ import android.util.Log
 import androidx.activity.result.ActivityResult
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.viditnakhawa.myimageapp.GemmaIntegration
 import com.viditnakhawa.myimageapp.data.*
 import com.viditnakhawa.myimageapp.ui.common.AuthConfig
 import com.viditnakhawa.myimageapp.ui.common.LlmChatModelHelper
@@ -118,17 +119,21 @@ class ModelManagerViewModel(
         )
     }
 
+    fun cancelDownload(model: Model) {
+        // This function will tell the repository to stop the download for the given model.
+        downloadRepository.cancelDownload(model)
+    }
+
     fun initializeModel(context: Context, model: Model) {
-        Log.d(TAG, "Initializing model: ${model.name}")
+        Log.d("ModelManagerViewModel", "Initializing model: ${model.name}")
         updateModelInitializationStatus(model, ModelInitializationStatusType.INITIALIZING)
 
         viewModelScope.launch(Dispatchers.IO) {
-            LlmChatModelHelper.initialize(context, model) { error ->
-                if (error.isEmpty()) {
-                    updateModelInitializationStatus(model, ModelInitializationStatusType.INITIALIZED)
-                } else {
-                    updateModelInitializationStatus(model, ModelInitializationStatusType.ERROR, error)
-                }
+            val error = GemmaIntegration.initialize(context)
+            if (error.isEmpty()) {
+                updateModelInitializationStatus(model, ModelInitializationStatusType.INITIALIZED)
+            } else {
+                updateModelInitializationStatus(model, ModelInitializationStatusType.ERROR, error)
             }
         }
     }

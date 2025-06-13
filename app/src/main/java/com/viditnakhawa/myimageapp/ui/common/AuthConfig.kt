@@ -5,7 +5,7 @@ import net.openid.appauth.AuthorizationServiceConfiguration
 
 object AuthConfig {
     // Hugging Face Client ID.
-    const val clientId = "88a0ac25-fcf4-467b-b8cd-ebcc2aec9bd0"
+    const val clientId = "2a86076c-41f2-4048-9094-f586e8a0f864"
 
     // IMPORTANT: This MUST match the scheme in your AndroidManifest.xml
     const val redirectUri = "com.viditnakhawa.myimageapp.oauth://oauthredirect" // <-- Change this if your package name is different

@@ -36,9 +36,11 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.dp
 import coil.compose.AsyncImage
+import coil.request.ImageRequest
 import com.viditnakhawa.myimageapp.R
 
 @Composable
@@ -54,22 +56,20 @@ fun ScreenshotsGalleryScreenWithFAB(
 
     Scaffold(
         floatingActionButton = {
-            // Use a Column to stack the FABs vertically
             Column(
                 horizontalAlignment = Alignment.End,
                 verticalArrangement = Arrangement.spacedBy(16.dp)
             ) {
-                // 1. "Manage Model" Squircle Floating Action Button
+                // 1."Manage Model"
                 FloatingActionButton(
                     onClick = onManageModelClick,
-                    shape = RoundedCornerShape(16.dp), // This creates the "squircle" shape
+                    shape = RoundedCornerShape(16.dp),
                     containerColor = MaterialTheme.colorScheme.secondaryContainer,
                     contentColor = MaterialTheme.colorScheme.onSecondaryContainer,
                     elevation = FloatingActionButtonDefaults.elevation(),
-                    modifier = Modifier.size(58.dp) // A smaller size for a secondary FAB
+                    modifier = Modifier.size(58.dp)
                 ) {
-                    // 2. Use painterResource to load your PNG icon.
-                    // in your app/src/main/res/drawable folder.
+                    // 2."Add Image"
                     Icon(
                         painter = painterResource(id = R.drawable.gemma_color),
                         contentDescription = "Manage Model",
@@ -115,7 +115,6 @@ fun ScreenshotsGalleryScreenWithFAB(
             }
         }
     ) { innerPadding ->
-        // This Column now fills the entire available space provided by the Scaffold
         Column(
             modifier = Modifier
                 .padding(innerPadding)
@@ -143,16 +142,18 @@ fun ScreenshotsGalleryScreenWithFAB(
             // Image Grid
             LazyVerticalGrid(
                 columns = GridCells.Adaptive(minSize = 128.dp),
-                // By using .weight(1f), the grid takes up all the remaining space
-                // in the Column after the Row is measured, which prevents the crash.
                 modifier = Modifier.weight(1f),
                 contentPadding = PaddingValues(horizontal = 8.dp, vertical = 8.dp),
                 verticalArrangement = Arrangement.spacedBy(8.dp),
                 horizontalArrangement = Arrangement.spacedBy(8.dp)
             ) {
-                items(images) { imageUri ->
+                items(items = images, key = { imageUri -> imageUri.toString() }) { imageUri ->
                     AsyncImage(
-                        model = imageUri,
+                        model = ImageRequest.Builder(LocalContext.current)
+                            .data(imageUri)
+                            .size(256) // Request a 256x256 pixel thumbnail
+                            .crossfade(true) // For a smooth fade-in effect
+                            .build(),
                         contentDescription = "Screenshot",
                         contentScale = ContentScale.Crop,
                         modifier = Modifier

@@ -35,6 +35,7 @@ fun ModelItemActionButton(
 
         ModelDownloadStatusType.IN_PROGRESS -> IconButton(onClick = {
             // TODO: Implement cancel logic in ViewModel and Repository
+            modelManagerViewModel.cancelDownload(model)
         }) {
             Icon(Icons.Rounded.Cancel, contentDescription = "Cancel")
         }

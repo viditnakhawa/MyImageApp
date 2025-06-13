@@ -1,5 +1,5 @@
 package com.viditnakhawa.myimageapp
-/*
+
 import android.content.Context
 import android.os.Environment
 import android.util.Log
@@ -8,94 +8,96 @@ import com.viditnakhawa.myimageapp.data.Model
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import java.io.File
+import com.viditnakhawa.myimageapp.data.GEMMA_E2B_MODEL
 
+
+/**
+ * A singleton object to handle the initialization and execution of the Gemma LlmInference engine.
+ */
 object GemmaIntegration {
 
     private var llmInference: LlmInference? = null
 
+    /**
+     * Checks if the Gemma inference engine has been successfully initialized.
+     */
     fun isInitialized(): Boolean = llmInference != null
 
     /**
-     * Tries to create an LlmInference instance from the model file stored in the Downloads folder.
-     * This should only be called after the model is confirmed to be downloaded.
+     * Initializes the LlmInference engine from the downloaded model file.
+     * This should be called after the model is confirmed to be downloaded.
+     * @param context The application context.
+     * @return An empty string on success, or an error message on failure.
      */
-    fun initializeFromDownloads(context: Context, modelInfo: Model): Boolean {
-        if (llmInference != null) {
-            Log.d("GemmaIntegration", "Already initialized.")
-            return true
-        }
-
-        return try {
-            val downloadsDir = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS)
-            val modelFile = File(downloadsDir, modelInfo.localFileName)
-
-            if (!modelFile.exists()) {
-                Log.e("GemmaIntegration", "Model file not found in Downloads folder!")
-                return false
-            }
-
-            val options = LlmInference.LlmInferenceOptions.builder()
-                .setModelPath(modelFile.absolutePath)
-                .build()
-
-            llmInference = LlmInference.createFromOptions(context, options)
-            Log.d("GemmaIntegration", "Gemma initialized successfully from Downloads folder.")
-            true
-        } catch (e: Exception) {
-            Log.e("GemmaIntegration", "Failed to initialize Gemma from Downloads folder", e)
-            false
-        }
-    }
-
-    suspend fun analyzeText(rawText: String): PostDetails {
-        if (llmInference == null) {
-            return PostDetails(content = "Error: Gemma model is not ready. Please download the model first.", rawText = rawText)
-        }
-
-        val prompt = """
-        You are an expert content analyzer for a screenshot app.
-        Given raw, messy text extracted from a screenshot, follow these steps:
-
-        Detect Content Type:
-        Identify if the text is from a social media post, news article, chat, receipt, or another source.
-
-        Remove UI Noise:
-        Exclude any irrelevant device or app interface text.
-
-        Structure the Output:
-        Extract and label key information (e.g., Author, Headline, Summary).
-
-        Summarize:
-        Provide a concise summary of the main content.
-        
-        ---
-        Here is the text to analyze:
-        "$rawText"
-        """.trimIndent()
-
+    suspend fun initialize(context: Context): String {
         return withContext(Dispatchers.IO) {
+            if (llmInference != null) {
+                Log.d("GemmaIntegration", "Gemma is already initialized.")
+                return@withContext ""
+            }
             try {
-                val response = llmInference!!.generateResponse(prompt)
-                parseGemmaResponse(response, rawText)
+                val model = GEMMA_E2B_MODEL // Your model definition
+                val modelFile = File(model.getPath(context))
+
+                if (!modelFile.exists()) {
+                    val errorMsg = "Model file does not exist at path: ${modelFile.absolutePath}"
+                    Log.e("GemmaIntegration", errorMsg)
+                    return@withContext errorMsg
+                }
+
+                // These are the options for the inference engine.
+                val options = LlmInference.LlmInferenceOptions.builder()
+                    .setModelPath(modelFile.absolutePath)
+                    .build()
+
+                llmInference = LlmInference.createFromOptions(context, options)
+                Log.d("GemmaIntegration", "Gemma initialized successfully.")
+                "" // Return empty string on success
             } catch (e: Exception) {
-                Log.e("GemmaIntegration", "Error during Gemma inference", e)
-                PostDetails(rawText = rawText, content = "Error during analysis: ${e.message}")
+                val errorMsg = "Failed to initialize Gemma: ${e.message}"
+                Log.e("GemmaIntegration", errorMsg, e)
+                errorMsg
             }
         }
     }
 
-    private fun parseGemmaResponse(responseText: String, rawText: String): PostDetails {
-        val lines = responseText.lines().filter { it.isNotBlank() }
-        val title = lines.firstOrNull { it.contains(":", ignoreCase = true) }
-            ?.substringBefore(':')
-            ?.trim()
-            ?: "Analysis"
-        val content = lines.joinToString("\n")
+        /**
+         * Generates a response from the Gemma model for a given text prompt.
+         * @param prompt The input text to analyze.
+         * @return The model's generated response string.
+         */
+        suspend fun analyzeText(prompt: String): String {
+            if (!isInitialized()) {
+                val errorMsg = "Error: Gemma model is not initialized."
+                Log.e("GemmaIntegration", errorMsg)
+                return errorMsg
+            }
 
-        return PostDetails(
-            title = title,
-            content = content,
-            rawText = rawText
-        )
+            return try {
+                llmInference!!.generateResponse(prompt)
+            } catch (e: Exception) {
+                val errorMsg = "Error during Gemma inference: ${e.message}"
+                Log.e("GemmaIntegration", errorMsg, e)
+                errorMsg
+            }
+        }
+
+        /**
+         * Creates a structured prompt for analyzing the raw text extracted from a screenshot.
+         * @param rawText The unstructured text from OCR.
+         * @return A formatted prompt string to guide the Gemma model.
+         */
+        fun createAnalysisPrompt(rawText: String): String {
+            return """
+        Act as a precise text cleaner for OCR output. Your task:
+            - Remove ALL UI elements: Buttons (Like, Share, Reply), icons (🔍, ⚙️), navigation bars, system timestamps, and app chrome
+            - Preserve EXACT original text order and wording
+            - Keep numbers/dates intact
+            - Maintain original line breaks for paragraphs
+            - Never add summaries or interpretations
+            OCR Input:
+            "$rawText"
+        """.trimIndent()
+        }
     }
-}*/
+

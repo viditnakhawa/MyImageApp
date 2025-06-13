@@ -20,6 +20,14 @@ import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import com.viditnakhawa.myimageapp.data.ModelDownloadStatusType
 import com.viditnakhawa.myimageapp.ui.common.checkNotificationPermissionAndStartDownload
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.rounded.ArrowForward
+import androidx.compose.material3.*
+import androidx.compose.ui.tooling.preview.Preview
+import com.viditnakhawa.myimageapp.data.ModelDownloadStatus
+import com.viditnakhawa.myimageapp.ui.common.humanReadableSize
+import com.viditnakhawa.myimageapp.ui.theme.MyImageAppTheme
+
 
 @Composable
 fun ModelItem(
@@ -80,3 +88,4 @@ fun ModelItem(
         }
     }
 }
+

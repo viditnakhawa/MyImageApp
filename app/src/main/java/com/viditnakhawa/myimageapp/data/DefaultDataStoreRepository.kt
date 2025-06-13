@@ -47,7 +47,7 @@ class DefaultDataStoreRepository(
         val ACCESS_TOKEN_EXPIRES_AT = longPreferencesKey("access_token_expires_at")
     }
 
-    private val keystoreAlias: String = "com.your.app.access_token_key"
+    private val keystoreAlias: String = "com.viditnakhawa.myimageapp.access_token_key"
     private val keyStore: KeyStore = KeyStore.getInstance("AndroidKeyStore").apply { load(null) }
 
     override fun saveAccessTokenData(accessToken: String, refreshToken: String, expiresAt: Long) {

@@ -2,7 +2,10 @@ package com.viditnakhawa.myimageapp.ui.common
 
 
 import android.content.Context
+import android.content.Intent
+import android.util.Log
 import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.ActivityResultLauncher
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
@@ -34,11 +37,27 @@ fun DownloadAndTryButton(
     val scope = rememberCoroutineScope()
     val context = LocalContext.current
     var checkingToken by remember { mutableStateOf(false) }
+    var showAgreementAckSheet by remember { mutableStateOf(false) }
+    var showErrorDialog by remember { mutableStateOf(false) }
     val permissionLauncher = rememberLauncherForActivityResult(
         ActivityResultContracts.RequestPermission()
     ) {
         modelManagerViewModel.downloadModel(task = task, model = model)
     }
+
+    val startDownload: (accessToken: String?) -> Unit = { accessToken ->
+        model.accessToken = accessToken
+        onClicked()
+        checkNotificationPermissionAndStartDownload(
+            context = context,
+            launcher = permissionLauncher,
+            modelManagerViewModel = modelManagerViewModel,
+            task = task,
+            model = model
+        )
+        checkingToken = false
+    }
+
 
     val authResultLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.StartActivityForResult()

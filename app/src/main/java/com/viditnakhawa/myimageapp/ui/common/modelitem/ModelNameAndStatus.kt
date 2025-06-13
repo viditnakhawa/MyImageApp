@@ -47,11 +47,16 @@ fun ModelNameAndStatus(
             )
         }
 
-        if (inProgress) {
-            LinearProgressIndicator(
-                progress = { (downloadStatus?.receivedBytes?.toFloat() ?: 0f) / (downloadStatus?.totalBytes ?: 1L) },
-                modifier = Modifier.padding(top = 4.dp)
-            )
+        val safeProgress = when {
+            downloadStatus == null || downloadStatus.totalBytes == 0L -> 0f
+            else -> (downloadStatus.receivedBytes.toFloat() / downloadStatus.totalBytes.toFloat()).coerceIn(0f, 1f)
         }
+
+        LinearProgressIndicator(
+            progress = { safeProgress },
+            modifier = Modifier.padding(top = 4.dp),
+            color = MaterialTheme.colorScheme.primary, // The color of the progress bar itself
+            trackColor = MaterialTheme.colorScheme.surfaceVariant, // The color of the bar's background
+        )
     }
 }

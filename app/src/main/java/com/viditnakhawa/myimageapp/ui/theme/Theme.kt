@@ -33,7 +33,6 @@ private val darkScheme = darkColorScheme(
 @Immutable
 data class CustomColors(
     val taskBgColors: List<Color> = listOf(),
-    // THIS LINE WAS MISSING
     val taskIconColors: List<Color> = listOf()
 )
 
@@ -46,7 +45,7 @@ val lightCustomColors = CustomColors(
         Color(0xFFFFEFC9), // yellow
         Color(0xFFFFEDE6), // red
     ),
-    // THIS INITIALIZATION WAS CAUSING THE ERROR
+
     taskIconColors = listOf(
         Color(0xFF34A853),
         Color(0xFF1967D2),
@@ -57,10 +56,10 @@ val lightCustomColors = CustomColors(
 
 val darkCustomColors = CustomColors(
     taskBgColors = listOf(
-        Color(0xFF2E312D), // green
-        Color(0xFF303033), // blue
-        Color(0xFF33302A), // yellow
-        Color(0xFF362F2D), // red
+        Color(0xFF2E312D),
+        Color(0xFF303033),
+        Color(0xFF33302A),
+        Color(0xFF362F2D),
     ),
     taskIconColors = listOf(
         Color(0xFF6DD58C),
@@ -98,7 +97,7 @@ fun GemmaDownloaderTheme(
     CompositionLocalProvider(LocalCustomColors provides customColorsPalette) {
         MaterialTheme(
             colorScheme = colorScheme,
-            typography = Typography, // Assumes a Typography.kt file exists
+            typography = Typography,
             content = content
         )
     }
