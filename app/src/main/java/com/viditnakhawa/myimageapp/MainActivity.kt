@@ -1,6 +1,5 @@
 package com.viditnakhawa.myimageapp
 
-import ImageDetailScreen
 import android.Manifest
 import android.content.Intent
 import android.net.Uri
@@ -9,19 +8,32 @@ import android.os.Bundle
 import android.util.Log
 import android.widget.Toast
 import androidx.activity.ComponentActivity
+import androidx.activity.compose.BackHandler
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.compose.setContent
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.activity.viewModels
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.padding
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material3.Button
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.Text
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.unit.dp
 import androidx.lifecycle.lifecycleScope
+import coil.compose.AsyncImage
+import coil.request.ImageRequest
 import com.viditnakhawa.myimageapp.ui.AnalysisScreen
 import com.viditnakhawa.myimageapp.ui.ImageViewModel
 import com.viditnakhawa.myimageapp.ui.ModelManagerScreen
@@ -32,6 +44,12 @@ import com.viditnakhawa.myimageapp.ui.common.ViewModelProvider
 import com.google.accompanist.permissions.ExperimentalPermissionsApi
 import com.google.accompanist.permissions.isGranted
 import com.google.accompanist.permissions.rememberPermissionState
+import androidx.activity.result.PickVisualMediaRequest
+import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.material3.Icon
+import androidx.compose.ui.draw.clip
 
 class MainActivity : ComponentActivity() {
 
@@ -47,7 +65,8 @@ class MainActivity : ComponentActivity() {
         }
         setContent {
             MyImageAppTheme {
-                MyImageApp()
+                //MyImageApp()
+                PermissionWrapper()
             }
         }
     }
@@ -90,6 +109,7 @@ class MainActivity : ComponentActivity() {
         var currentScreen by remember { mutableStateOf<Screen>(Screen.Gallery) }
         var selectedImageUri by remember { mutableStateOf<Uri?>(null) }
         var analysisResult by remember { mutableStateOf<PostDetails?>(null) }
+        var isLoadingAnalysis by remember { mutableStateOf(false) } // To show a loading spinner
 
         val imageList by viewModel.images.collectAsState()
 
@@ -128,14 +148,25 @@ class MainActivity : ComponentActivity() {
                     onCapturePhotoClick = { currentScreen = Screen.Camera },
                     onPickFromGalleryClick = {
                         pickMediaLauncher.launch(
-                            androidx.activity.result.PickVisualMediaRequest(
+                            PickVisualMediaRequest(
                                 ActivityResultContracts.PickVisualMedia.ImageOnly
                             )
                         )
                     },
-                    onImageClick = { uri: Uri ->
+                    onImageClick = { uri ->
+                        // When an image is clicked in the gallery:
+                        // 1. Set the selected image URI.
                         selectedImageUri = uri
-                        currentScreen = Screen.Detail
+                        // 2. Set loading state to true.
+                        isLoadingAnalysis = true
+                        // 3. Immediately navigate to the Analysis screen.
+                        currentScreen = Screen.Analysis
+                        // 4. Launch a coroutine to fetch the analysis in the background.
+                        lifecycleScope.launch {
+                            // The analysis will be ready when the user sees the screen.
+                            analysisResult = MLKitImgDescProcessor.describeImage(applicationContext, uri)
+                            isLoadingAnalysis = false // Analysis is done, hide spinner.
+                        }
                     },
                     onManageModelClick = {
                         currentScreen = Screen.ModelManager
@@ -153,13 +184,16 @@ class MainActivity : ComponentActivity() {
                     }
                 )
             }
-            is Screen.Detail -> {
-                selectedImageUri?.let { uri ->
-                    ImageDetailScreen(
-                        imageUri = uri,
+            is Screen.Analysis -> {
+                // This is our new, polished detail screen.
+                if (selectedImageUri != null && analysisResult != null) {
+                    AnalysisScreen(
+                        imageUri = selectedImageUri!!,
+                        details = analysisResult!!,
                         onClose = { currentScreen = Screen.Gallery },
-                        onShare = { /* Implement share */ },
-                        onEdit = { /* Implement edit */ },
+                        // When the image itself is tapped, go to the full-screen viewer
+                        onAddToCollection = {/*TODO*/},
+                        onShare = {/*TODO*/},
                         onDelete = {
                             viewModel.removeImage(it)
                             currentScreen = Screen.Gallery
@@ -168,13 +202,6 @@ class MainActivity : ComponentActivity() {
                             lifecycleScope.launch {
                                 val text = processImageWithOCR(applicationContext, imageUri)
                                 analysisResult = PostDetails(title = "Text Recognition (OCR)", content = text)
-                                currentScreen = Screen.Analysis
-                            }
-                        },
-                        onDescribeImage = { imageUri ->
-                            lifecycleScope.launch {
-                                val result = MLKitImgDescProcessor.describeImage(applicationContext, imageUri)
-                                analysisResult = result
                                 currentScreen = Screen.Analysis
                             }
                         },
@@ -212,54 +239,68 @@ class MainActivity : ComponentActivity() {
                                     Toast.LENGTH_LONG
                                 ).show()
                             }
-                        }
-                    )
-                }
-            }
-            is Screen.Analysis -> {
-                // This is our new, polished detail screen.
-                if (selectedImageUri != null && analysisResult != null) {
-                    AnalysisScreen(
-                        imageUri = selectedImageUri!!,
-                        details = analysisResult!!,
-                        onClose = { currentScreen = Screen.Gallery },
-                        // When the image itself is tapped, go to the full-screen viewer
+                        },
                         onImageClick = { currentScreen = Screen.FullScreenViewer }
                     )
                 }
             }
 
             is Screen.FullScreenViewer -> {
-                // This screen just shows the image immersively.
-                // We re-use ImageDetailScreen but only for its full-screen viewing capability.
                 selectedImageUri?.let { uri ->
-                    ImageDetailScreen(
+                    FullScreenImageViewer(
                         imageUri = uri,
-                        onClose = { currentScreen = Screen.Analysis }, // Go back to the Analysis screen
-                        // The rest of the actions can be empty as they are not shown in this mode
-                        onShare = {},
-                        onEdit = {},
-                        onDelete = {},
-                        onRecognizeText = {},
-                        onDescribeImage = {},
-                        onAnalyzeWithGemma = {}
+                        onClose = { currentScreen = Screen.Analysis }
                     )
                 }
             }
+
             // This block handles displaying the new ModelManagerScreen
             is Screen.ModelManager -> {
                 ModelManagerScreen(onClose = { currentScreen = Screen.Gallery })
             }
+
+            Screen.FullScreenViewer -> TODO()
         }
     }
 
     sealed class Screen {
         object Gallery : Screen()
         object Camera : Screen()
-        object Detail : Screen()
         object Analysis : Screen()
         object FullScreenViewer : Screen()
         object ModelManager : Screen()
     }
 }
 
+@Composable
+fun FullScreenImageViewer(imageUri: Uri, onClose: () -> Unit) {
+    //The button for universal back gesture
+    BackHandler(onBack = onClose)
+    Box(modifier = Modifier.fillMaxSize().background(Color.Black)) {
+        AsyncImage(
+            model = ImageRequest.Builder(LocalContext.current)
+                .data(imageUri)
+                .build(),
+            contentDescription = "Full screen image",
+            contentScale = ContentScale.Fit,
+            modifier = Modifier.fillMaxSize()
+        )
+        IconButton(
+            onClick = onClose,
+            modifier = Modifier
+                .align(Alignment.TopStart)
+                .padding(top = 52.dp, start = 20.dp)
+                .background(
+                    color = Color.Black.copy(alpha = 0.7f), // Adjust alpha for translucency
+                    shape = CircleShape
+                )
+                .size(48.dp) // Standard touch target size
+        ) {
+            Icon(
+                imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                contentDescription = "Back",
+                tint = Color.White
+            )
+        }
+    }
+}
