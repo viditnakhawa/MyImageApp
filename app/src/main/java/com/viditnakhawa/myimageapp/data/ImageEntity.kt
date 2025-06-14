@@ -15,5 +15,7 @@ data class ImageEntity(
     // Add a field for the AI-generated tags
     var tags: List<String>? = null,
     // We can rename aiSummary to content to be more generic
-    var content: String? = null
+    var content: String? = null,
+    //Source App used in SmartAnalysisWorker
+    var sourceApp: String? = null
 )

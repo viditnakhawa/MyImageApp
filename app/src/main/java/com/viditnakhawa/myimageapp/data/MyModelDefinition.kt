@@ -7,7 +7,7 @@ import com.viditnakhawa.myimageapp.ui.common.createLlmChatConfigs
 
 // 1. Define the specific model using data from the original model_allowlist.json
 val GEMMA_E2B_MODEL = Model(
-    name = "Gemma-3n-E2B-it-int4",
+    name = "Gemma E2B",
     // These details are taken directly from the allowlist file
     version = "20250520",
     llmSupportImage = true,

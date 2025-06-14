@@ -9,32 +9,25 @@ import kotlinx.coroutines.flow.Flow
 
 @Dao
 interface ImageDao {
-    /**
-     * Gets all saved images from the database, ordered by newest first.
-     */
+
+    //Gets all saved images from the database, ordered by newest first.
     @Query("SELECT * FROM images ORDER BY rowid DESC")
     fun getAllImages(): Flow<List<ImageEntity>>
 
-    /**
-     * Inserts a single image. If the URI already exists, it's ignored.
-     */
+    //Inserts a single image. If the URI already exists, it's ignored.
     @Insert(onConflict = OnConflictStrategy.IGNORE)
     suspend fun insertImage(image: ImageEntity): Long
 
     @Update
     suspend fun updateImage(image: ImageEntity)
 
-    /**
-     * Deletes an image from the database using its URI string.
-     */
-
-
+    //Deletes an image from the database using its URI string.
     @Query("DELETE FROM images WHERE imageUri = :uri")
     suspend fun deleteImage(uri: String): Int
 
     // Add a function to get a single entity by its URI
     @Query("SELECT * FROM images WHERE imageUri = :uri")
-    suspend fun getImageByUri(uri: String): ImageEntity?
+    fun getImageByUri(uri: String): Flow<ImageEntity?>
 
     @Query("SELECT imageUri FROM images")
     suspend fun getAllImageUris(): List<String>
@@ -43,5 +36,10 @@ interface ImageDao {
     // but we'll keep it for the initial scan from the repository.
     @Insert(onConflict = OnConflictStrategy.IGNORE)
     suspend fun insertImages(images: List<ImageEntity>): List<Long>
+
+    // This query will find all images that have a basic analysis (or none)
+    // but are missing the 'sourceApp', which marks a full Gemma analysis.
+    @Query("SELECT * FROM images WHERE sourceApp IS NULL")
+    suspend fun getUnanalyzedImages(): List<ImageEntity>
 
 }

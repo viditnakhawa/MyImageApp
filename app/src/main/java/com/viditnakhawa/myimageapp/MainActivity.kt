@@ -55,8 +55,17 @@ import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.ui.draw.clip
+import androidx.lifecycle.viewmodel.compose.viewModel
+import com.viditnakhawa.myimageapp.data.ImageEntity
+import androidx.work.OneTimeWorkRequestBuilder
+import androidx.work.WorkManager
+import androidx.work.workDataOf
+import com.viditnakhawa.myimageapp.data.GEMMA_E2B_MODEL
+import com.viditnakhawa.myimageapp.ui.modelmanager.ModelManagerViewModel
+import com.viditnakhawa.myimageapp.workers.SmartAnalysisWorker
 
 class MainActivity : ComponentActivity() {
 
@@ -69,6 +78,13 @@ class MainActivity : ComponentActivity() {
         // On app start, refresh the image list from the device's screenshots folder
         lifecycleScope.launch {
             (application as MyApplication).container.imageRepository.refreshImagesFromDevice(applicationContext)
+            val modelManagerViewModel: ModelManagerViewModel by viewModels { ViewModelProvider.Factory }
+            // Check if the model is downloaded but not yet initialized
+            if (!modelManagerViewModel.isGemmaInitialized() &&
+                (application as MyApplication).container.imageRepository.isGemmaModelDownloaded(this@MainActivity)) {
+                // Initialize it in the background
+                modelManagerViewModel.initializeModel(this@MainActivity, GEMMA_E2B_MODEL)
+            }
         }
         setContent {
             MyImageAppTheme {
@@ -115,10 +131,34 @@ class MainActivity : ComponentActivity() {
     fun MyImageApp() {
         var currentScreen by remember { mutableStateOf<Screen>(Screen.Gallery) }
         var selectedImageUri by remember { mutableStateOf<Uri?>(null) }
-        var analysisResult by remember { mutableStateOf<PostDetails?>(null) }
-        var isLoadingAnalysis by remember { mutableStateOf(false) } // To show a loading spinner
+        var isLoadingAnalysis by remember { mutableStateOf(false) }
 
         val imageList by viewModel.images.collectAsState()
+        val scope = rememberCoroutineScope()
+        val modelManagerViewModel: ModelManagerViewModel = viewModel(factory = ViewModelProvider.Factory)
+
+        // This produceState block is correct and will now be the ONLY source for analysisResult
+        val analysisResult by produceState<PostDetails?>(initialValue = null, key1 = selectedImageUri) {
+            // When selectedImageUri changes, this block runs
+            selectedImageUri?.let { uri ->
+                isLoadingAnalysis = true
+                viewModel.getImageDetailsFlow(uri).collect { entity ->
+                    // This will emit a new value whenever the database entry for this URI changes
+                    value = if (entity?.title != null) {
+                        PostDetails(
+                            title = entity.title!!,
+                            content = entity.content ?: "",
+                            sourceApp = entity.sourceApp,
+                            tags = entity.tags,
+                            isFallback = (entity.title != null && entity.sourceApp == null)
+                        )
+                    } else {
+                        PostDetails(title = "Analyzing...")
+                    }
+                    isLoadingAnalysis = false
+                }
+            }
+        }
 
         val pickMediaLauncher = rememberLauncherForActivityResult(
             contract = ActivityResultContracts.PickMultipleVisualMedia()
@@ -154,11 +194,10 @@ class MainActivity : ComponentActivity() {
                 is Screen.Analysis -> currentScreen = Screen.Gallery
                 is Screen.FullScreenViewer -> currentScreen = Screen.Analysis
                 is Screen.ModelManager -> currentScreen = Screen.Gallery
+                is Screen.Camera -> currentScreen = Screen.Gallery
                 else -> { /* No action needed for Gallery */ }
             }
         }
-        // --- ANIMATED NAVIGATION ---
-        // AnimatedContent will handle the transitions between screens.
 
         when (currentScreen) {
             is Screen.Gallery -> {
@@ -174,25 +213,47 @@ class MainActivity : ComponentActivity() {
                         )
                     },
                     onImageClick = { uri ->
-                        // When an image is clicked in the gallery:
-                        // 1. Set the selected image URI.
+                        // --- THIS IS THE SIMPLIFIED LOGIC ---
+                        // 1. Set the URI. This will trigger the produceState block above.
                         selectedImageUri = uri
-                        // 2. Set loading state to true.
-                        isLoadingAnalysis = true
-                        // 3. Immediately navigate to the Analysis screen.
+                        // 2. Navigate to the screen.
                         currentScreen = Screen.Analysis
-                        // 4. Launch a coroutine to fetch the analysis in the background.
-                        lifecycleScope.launch {
-                            // The analysis will be ready when the user sees the screen.
-                            analysisResult = MLKitImgDescProcessor.describeImage(applicationContext, uri)
-                            isLoadingAnalysis = false // Analysis is done, hide spinner.
+                        // 3. Launch a check to see if a *new* analysis is needed.
+                        scope.launch {
+                            // Get the current state of the image from the database
+                            val imageDetails = viewModel.getImageDetails(uri)
+                            val gemmaIsReady = modelManagerViewModel.isGemmaInitialized()
+
+                            // Decide if we need to run an analysis
+                            val needsSmartAnalysis = gemmaIsReady && imageDetails?.sourceApp == null
+                            val needsFallbackAnalysis = !gemmaIsReady && imageDetails == null
+
+                            //val needsAnalysis = viewModel.getImageDetails(uri)?.title == null
+                            if (needsSmartAnalysis) {
+                                // Upgrade from fallback or analyze for the first time with Gemma
+                                val workManager = WorkManager.getInstance(applicationContext)
+                                val workRequest = OneTimeWorkRequestBuilder<SmartAnalysisWorker>()
+                                    .setInputData(workDataOf("IMAGE_URI" to uri.toString()))
+                                    .build()
+                                workManager.enqueue(workRequest)
+                            } else if (needsFallbackAnalysis) {
+                                // First time analysis, but Gemma isn't ready
+                                val fallbackAnalysis = MLKitImgDescProcessor.describeImage(applicationContext, uri)
+                                val entityToSave = ImageEntity(
+                                    imageUri = uri.toString(),
+                                    title = fallbackAnalysis.title,
+                                    content = fallbackAnalysis.content
+                                    // sourceApp remains null, marking this as a fallback
+                                )
+                                viewModel.updateImageDetails(entityToSave)
+                            }
+                            // If neither condition is met, do nothing. The existing cached data is sufficient.
                         }
                     },
-                    onManageModelClick = {
-                        currentScreen = Screen.ModelManager
-                    }
+                    onManageModelClick = { currentScreen = Screen.ModelManager }
                 )
             }
+
             is Screen.Camera -> {
                 ComposeCameraScreen(
                     onImageCaptured = { uri ->
@@ -204,17 +265,18 @@ class MainActivity : ComponentActivity() {
                     }
                 )
             }
+
             is Screen.Analysis -> {
                 // This is our new, polished detail screen.
                 if (selectedImageUri != null && analysisResult != null) {
                     AnalysisScreen(
                         imageUri = selectedImageUri!!,
-                        details = analysisResult!!,
+                        // Show a loading state from `isLoadingAnalysis` OR if analysisResult is null
+                        isLoading = isLoadingAnalysis || analysisResult == null,
+                        details = analysisResult, // Pass the nullable details
                         onClose = { currentScreen = Screen.Gallery },
-                        // When the image itself is tapped, go to the full-screen viewer
-                        onAddToCollection = {/*TODO*/},
+                        onAddToCollection = { /*TODO*/ },
                         onShare = { uri ->
-                            // --- SHARE LOGIC IMPLEMENTED HERE ---
                             val shareIntent: Intent = Intent().apply {
                                 action = Intent.ACTION_SEND
                                 putExtra(Intent.EXTRA_STREAM, uri)
@@ -227,52 +289,49 @@ class MainActivity : ComponentActivity() {
                             viewModel.removeImage(it)
                             currentScreen = Screen.Gallery
                         },
+
+                        // --- CORRECTED LOGIC FOR onRecognizeText ---
                         onRecognizeText = { imageUri ->
-                            lifecycleScope.launch {
-                                val text = processImageWithOCR(applicationContext, imageUri)
-                                analysisResult = PostDetails(title = "Text Recognition (OCR)", content = text)
-                                currentScreen = Screen.Analysis
+                            scope.launch {
+                                // 1. Run the OCR process
+                                val ocrText = processImageWithOCR(applicationContext, imageUri)
+                                // 2. Get the current details from the database
+                                val currentDetails = viewModel.getImageDetails(imageUri) ?: ImageEntity(imageUri.toString())
+                                // 3. Update the entity and save it back to the database
+                                val updatedDetails = currentDetails.copy(
+                                    title = "Text Recognition (OCR)",
+                                    content = ocrText
+                                )
+                                viewModel.updateImageDetails(updatedDetails)
+                                // The UI will update automatically because produceState is listening for this change.
                             }
                         },
-                        onAnalyzeWithGemma = { imageUri ->
-                            if (GemmaIntegration.isInitialized()) {
-                                // If it's ready, launch the coroutine to do the work.
-                                // All suspend functions must be called inside this block.
-                                lifecycleScope.launch {
-                                    // 1. Run OCR to get the raw text from the image
-                                    val rawText = processImageWithOCR(applicationContext, imageUri)
-                                    if (rawText.contains("Error:", ignoreCase = true) || rawText.isBlank()) {
-                                        analysisResult = PostDetails(
-                                            title = "Gemma Analysis",
-                                            content = "Could not extract text from the image."
-                                        )
-                                        currentScreen = Screen.Analysis
-                                        return@launch // Exit the coroutine
-                                    }
 
-                                    // 2. Create the detailed prompt for the model
-                                    val prompt = GemmaIntegration.createAnalysisPrompt(rawText)
-
-                                    // 3. Run the inference (This suspend fun call is now correct)
-                                    val gemmaResponse = GemmaIntegration.analyzeText(prompt)
-
-                                    // 4. Display the result
-                                    analysisResult = PostDetails(title = "Gemma Analysis", content = gemmaResponse)
-                                    currentScreen = Screen.Analysis
-                                }
+                        // --- CORRECTED LOGIC FOR onAnalyzeWithGemma ---
+                        onAnalyzeWithGemma = {
+                            if (modelManagerViewModel.isGemmaInitialized()) {
+                                // This now correctly implements our plan to navigate to the chat screen (Phase 2)
+                                // For now, it will seem like nothing happens, which is correct until we build the chat screen.
+                                //currentScreen = Screen.Chat(analysisResult!!)
                             } else {
-                                // If it's not ready, just show the Toast message
+                                // This part is correct: prompt the user to initialize the model.
                                 Toast.makeText(
                                     this@MainActivity,
-                                    "Please initialize Gemma from 'Manage Model' screen.",
+                                    "Please initialize Gemma for a detailed chat.",
                                     Toast.LENGTH_LONG
                                 ).show()
+                                currentScreen = Screen.ModelManager
                             }
                         },
                         onImageClick = { currentScreen = Screen.FullScreenViewer }
                     )
+                } else if (isLoadingAnalysis) {
+                    Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                        CircularProgressIndicator()
+                    }
                 }
             }
+
 
             is Screen.FullScreenViewer -> {
                 selectedImageUri?.let { uri ->

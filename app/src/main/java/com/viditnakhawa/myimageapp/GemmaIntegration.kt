@@ -10,7 +10,7 @@ import kotlinx.coroutines.withContext
 import java.io.File
 import com.viditnakhawa.myimageapp.data.GEMMA_E2B_MODEL
 
-
+private const val TAG = "GemmaIntegration"
 /**
  * A singleton object to handle the initialization and execution of the Gemma LlmInference engine.
  */

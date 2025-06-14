@@ -23,7 +23,10 @@ data class PostDetails(
     val content: String = "",
     val stats: String = "",
     val replies: String = "",
-    val rawText: String = ""
+    val rawText: String = "",
+    val sourceApp: String? = null,
+    val tags: List<String>? = null,
+    val isFallback: Boolean = false
 )
 
 object MLKitImgDescProcessor {

@@ -6,6 +6,10 @@ import android.util.Log
 import androidx.activity.result.ActivityResult
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import androidx.work.ExistingWorkPolicy
+import androidx.work.OneTimeWorkRequestBuilder
+import androidx.work.WorkManager
+import com.viditnakhawa.myimageapp.workers.BatchAnalysisWorker
 import com.viditnakhawa.myimageapp.GemmaIntegration
 import com.viditnakhawa.myimageapp.data.*
 import com.viditnakhawa.myimageapp.ui.common.AuthConfig
@@ -137,6 +141,17 @@ class ModelManagerViewModel(
             val error = GemmaIntegration.initialize(context)
             if (error.isEmpty()) {
                 updateModelInitializationStatus(model, ModelInitializationStatusType.INITIALIZED)
+
+                val workManager = WorkManager.getInstance(context)
+                val batchWorkRequest = OneTimeWorkRequestBuilder<BatchAnalysisWorker>().build()
+                // Use "KEEP" to ensure that if a batch analysis is already running, we don't start a new one.
+                workManager.enqueueUniqueWork(
+                    "batch_analysis",
+                    ExistingWorkPolicy.KEEP,
+                    batchWorkRequest
+                )
+                Log.d("ModelManagerViewModel", "Batch analysis enqueued.")
+
             } else {
                 updateModelInitializationStatus(model, ModelInitializationStatusType.ERROR, error)
             }
@@ -222,5 +237,14 @@ class ModelManagerViewModel(
                 onTokenRequested(TokenRequestResult(TokenRequestResultType.USER_CANCELLED, "User cancelled"))
             }
         }
+    }
+
+    fun isGemmaInitialized(): Boolean {
+        val model = GEMMA_E2B_MODEL // Your model definition
+        val downloadStatus = uiState.value.modelDownloadStatus[model.name]?.status
+        val initStatus = uiState.value.modelInitializationStatus[model.name]?.status
+
+        return downloadStatus == ModelDownloadStatusType.SUCCEEDED &&
+                initStatus == ModelInitializationStatusType.INITIALIZED
     }
 }

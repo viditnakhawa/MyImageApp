@@ -14,6 +14,8 @@ import androidx.work.OneTimeWorkRequestBuilder
 import androidx.work.WorkManager
 import androidx.work.workDataOf
 import com.viditnakhawa.myimageapp.workers.ImageAnalysisWorker
+import kotlinx.coroutines.flow.firstOrNull
+import java.io.File
 
 class ImageRepository(private val imageDao: ImageDao) {
 
@@ -36,13 +38,40 @@ class ImageRepository(private val imageDao: ImageDao) {
 
     suspend fun updateImageSummary(uriString: String, summary: String) {
         withContext(Dispatchers.IO) {
-            val image = imageDao.getImageByUri(uriString)
+            val image = imageDao.getImageByUri(uriString).firstOrNull()
             if (image != null) {
-                val updatedImage = image.copy(aiSummary = summary)
+                val updatedImage = image.copy(content = summary)
                 imageDao.updateImage(updatedImage)
             }
         }
     }
+
+
+    //PHASE 1 CODE
+    suspend fun getImageDetails(uri: Uri): ImageEntity? {
+        return imageDao.getImageByUri(uri.toString()).firstOrNull()
+    }
+
+    suspend fun getImageDetailsFlow(uri: Uri): Flow<ImageEntity?> {
+        return imageDao.getImageByUri(uri.toString())
+    }
+
+    //PHASE 1 CODE
+    suspend fun updateImageDetails(imageDetails: ImageEntity) {
+        imageDao.updateImage(imageDetails)
+    }
+
+    //PHASE 1 CODE
+    fun isGemmaModelDownloaded(context: Context): Boolean {
+        val model = GEMMA_E2B_MODEL
+        val file = File(model.getPath(context))
+        return file.exists() && file.length() >= model.sizeInBytes
+    }
+
+    suspend fun getUnanalyzedImages(): List<ImageEntity> {
+        return imageDao.getUnanalyzedImages()
+    }
+
     /**
      * Scans the device's MediaStore for screenshots and only adds new ones to the database.
      * This is much more efficient on subsequent app launches.
