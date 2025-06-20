@@ -6,7 +6,7 @@ import androidx.work.CoroutineWorker
 import androidx.work.WorkerParameters
 import com.viditnakhawa.myimageapp.MLKitImgDescProcessor
 import com.viditnakhawa.myimageapp.MyApplication
-import com.viditnakhawa.myimageapp.data.ImageRepository
+import androidx.core.net.toUri
 
 class ImageAnalysisWorker(
     appContext: Context,
@@ -18,7 +18,8 @@ class ImageAnalysisWorker(
         val repository = (applicationContext as MyApplication).container.imageRepository
 
         return try {
-            val result = MLKitImgDescProcessor.describeImage(applicationContext, Uri.parse(imageUriString))
+            val result = MLKitImgDescProcessor.describeImage(applicationContext,
+                imageUriString.toUri())
             repository.updateImageSummary(imageUriString, result.content)
             Result.success()
         } catch (e: Exception) {

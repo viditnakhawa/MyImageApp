@@ -11,7 +11,6 @@ import com.viditnakhawa.myimageapp.data.DefaultAppContainer
 private val Context.dataStore: DataStore<Preferences> by preferencesDataStore(name = "my_app_preferences")
 
 class MyApplication : Application() {
-    // This container will hold all our dependencies (repositories)
     lateinit var container: AppContainer
 
     override fun onCreate() {

@@ -24,7 +24,6 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.viewmodel.compose.viewModel
-import com.viditnakhawa.myimageapp.GemmaIntegration
 import com.viditnakhawa.myimageapp.data.ASK_IMAGE_TASK
 import com.viditnakhawa.myimageapp.data.GEMMA_E2B_MODEL
 import com.viditnakhawa.myimageapp.data.Model

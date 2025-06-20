@@ -78,7 +78,18 @@ data class Model(
         }
     }
 
-    // You can omit the get...ConfigValue helper functions for now if you want
+    // Helper functions to get typed configuration values
+    fun getIntConfigValue(key: ConfigKey, defaultValue: Int): Int {
+        return (this.configValues[key.label] as? Number)?.toInt() ?: defaultValue
+    }
+
+    fun getFloatConfigValue(key: ConfigKey, defaultValue: Float): Float {
+        return (this.configValues[key.label] as? Number)?.toFloat() ?: defaultValue
+    }
+
+    fun getStringConfigValue(key: ConfigKey, defaultValue: String): String {
+        return this.configValues[key.label] as? String ?: defaultValue
+    }
 }
 
 /** Data for a imported local model. */
@@ -122,3 +133,4 @@ enum class ConfigKey(val label: String) {
     NAME("Name"),
     MODEL_TYPE("Model type")
 }
+

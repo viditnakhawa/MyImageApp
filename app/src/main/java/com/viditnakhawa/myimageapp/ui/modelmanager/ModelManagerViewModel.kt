@@ -1,6 +1,7 @@
 package com.viditnakhawa.myimageapp.ui.modelmanager
 
 import android.content.Context
+import android.graphics.Bitmap
 import android.net.Uri
 import android.util.Log
 import androidx.activity.result.ActivityResult
@@ -9,16 +10,18 @@ import androidx.lifecycle.viewModelScope
 import androidx.work.ExistingWorkPolicy
 import androidx.work.OneTimeWorkRequestBuilder
 import androidx.work.WorkManager
-import com.viditnakhawa.myimageapp.workers.BatchAnalysisWorker
-import com.viditnakhawa.myimageapp.GemmaIntegration
+import com.viditnakhawa.myimageapp.LlmChatModelHelper
 import com.viditnakhawa.myimageapp.data.*
 import com.viditnakhawa.myimageapp.ui.common.AuthConfig
-import com.viditnakhawa.myimageapp.ui.common.LlmChatModelHelper
+import com.viditnakhawa.myimageapp.workers.MultimodalAnalysisWorker
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.suspendCancellableCoroutine
+import kotlin.coroutines.resume
 import net.openid.appauth.AuthorizationException
 import net.openid.appauth.AuthorizationRequest
 import net.openid.appauth.AuthorizationResponse
@@ -138,22 +141,24 @@ class ModelManagerViewModel(
         updateModelInitializationStatus(model, ModelInitializationStatusType.INITIALIZING)
 
         viewModelScope.launch(Dispatchers.IO) {
-            val error = GemmaIntegration.initialize(context)
-            if (error.isEmpty()) {
-                updateModelInitializationStatus(model, ModelInitializationStatusType.INITIALIZED)
+            // Updated to use the new LlmChatModelHelper and its callback
+            LlmChatModelHelper.initialize(context, model) { error ->
+                if (error.isEmpty()) {
+                    updateModelInitializationStatus(model, ModelInitializationStatusType.INITIALIZED)
 
-                val workManager = WorkManager.getInstance(context)
-                val batchWorkRequest = OneTimeWorkRequestBuilder<BatchAnalysisWorker>().build()
-                // Use "KEEP" to ensure that if a batch analysis is already running, we don't start a new one.
-                workManager.enqueueUniqueWork(
-                    "batch_analysis",
-                    ExistingWorkPolicy.KEEP,
-                    batchWorkRequest
-                )
-                Log.d("ModelManagerViewModel", "Batch analysis enqueued.")
+                    val workManager = WorkManager.getInstance(context)
+                    val batchWorkRequest = OneTimeWorkRequestBuilder<MultimodalAnalysisWorker>().build()
 
-            } else {
-                updateModelInitializationStatus(model, ModelInitializationStatusType.ERROR, error)
+                    workManager.enqueueUniqueWork(
+                        "auto_image_analysis", // Use the unique name for the auto-analyzer
+                        ExistingWorkPolicy.KEEP,
+                        batchWorkRequest
+                    )
+                    Log.d("ModelManagerViewModel", "Model initialized, enqueued multimodal analysis.")
+
+                } else {
+                    updateModelInitializationStatus(model, ModelInitializationStatusType.ERROR, error)
+                }
             }
         }
     }
@@ -239,6 +244,69 @@ class ModelManagerViewModel(
         }
     }
 
+    fun performImageAnalysis(
+        image: Bitmap,
+        prompt: String,
+        onResult: (partialResult: String, done: Boolean) -> Unit
+    ) {
+        viewModelScope.launch(Dispatchers.Default) {
+            val model = GEMMA_E2B_MODEL // We are using our defined Gemma model
+            val modelInitStatus = uiState.value.modelInitializationStatus[model.name]
+
+            if (modelInitStatus?.status != ModelInitializationStatusType.INITIALIZED) {
+                // Check if the model is downloaded and try to initialize it
+                if(uiState.value.modelDownloadStatus[model.name]?.status == ModelDownloadStatusType.SUCCEEDED) {
+                    initializeModel(context, model)
+                    onResult("Model is preparing, please try again in a moment.", true)
+                } else {
+                    onResult("Error: Model is not downloaded yet.", true)
+                }
+                return@launch
+            }
+
+            LlmChatModelHelper.runInference(
+                model = model,
+                input = prompt,
+                images = listOf(image), // Pass the image in a list as your helper expects
+                resultListener = onResult,
+                cleanUpListener = { /* Not used in this simple flow */ }
+            )
+        }
+    }
+
+    @OptIn(ExperimentalCoroutinesApi::class)
+    suspend fun polishTextWithGemma(rawText: String): String =
+        suspendCancellableCoroutine { continuation ->
+            Log.d(TAG, "Sending OCR text to Gemma for polishing.")
+            val prompt = """
+                You are a text formatting expert. Clean up and polish the following raw OCR output. Correct spelling mistakes, add appropriate punctuation, and structure it into readable paragraphs with correct line breaks. Do not summarize, interpret, or change the meaning of the text. Return only the cleaned-up text.
+
+                RAW TEXT:
+                "$rawText"
+
+                POLISHED TEXT:
+            """.trimIndent()
+
+            LlmChatModelHelper.runInference(
+                model = GEMMA_E2B_MODEL,
+                input = prompt,
+                images = emptyList(), // No image needed for this task
+                resultListener = { partialResult, done ->
+                    // For a non-streaming task, the full result comes in one go.
+                    if (done) {
+                        if (continuation.isActive) {
+                            continuation.resume(partialResult)
+                        }
+                    }
+                },
+                cleanUpListener = {
+                    if (continuation.isActive) {
+                        continuation.resume("Error: Polishing was interrupted.")
+                    }
+                }
+            )
+        }
+
     fun isGemmaInitialized(): Boolean {
         val model = GEMMA_E2B_MODEL // Your model definition
         val downloadStatus = uiState.value.modelDownloadStatus[model.name]?.status
@@ -247,4 +315,5 @@ class ModelManagerViewModel(
         return downloadStatus == ModelDownloadStatusType.SUCCEEDED &&
                 initStatus == ModelInitializationStatusType.INITIALIZED
     }
+
 }

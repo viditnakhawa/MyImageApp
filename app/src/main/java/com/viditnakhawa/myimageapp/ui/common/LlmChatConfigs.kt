@@ -51,13 +51,3 @@ fun createLlmChatConfigs(
         )
     )
 }
-
-object LlmChatModelHelper {
-    fun initialize(context: Context, model: Model, onDone: (String) -> Unit) {
-        // Placeholder for actual MediaPipe LlmInference initialization
-        // In a real scenario, this would create the inference engine instance.
-        Log.d("LlmChatModelHelper", "Simulating initialization for ${model.name}")
-        model.instance = Any() // Simulate a successful instance creation
-        onDone("")
-    }
-}

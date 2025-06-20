@@ -8,10 +8,8 @@ import com.google.mlkit.vision.text.TextRecognition
 import com.google.mlkit.vision.text.latin.TextRecognizerOptions
 import java.io.IOException
 import kotlin.coroutines.resume
-import kotlin.coroutines.resumeWithException
 import kotlin.coroutines.suspendCoroutine
 
-//SUSPEND FUNCTION for easier use in coroutines.
 suspend fun processImageWithOCR(context: Context, uri: Uri): String = suspendCoroutine {
     continuation ->
     try {
