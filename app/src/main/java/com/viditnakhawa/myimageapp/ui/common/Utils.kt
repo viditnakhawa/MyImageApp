@@ -85,6 +85,14 @@ data class LaunchInfo(
     val ts: Long
 )
 
+fun cleanUpMediapipeTaskErrorMessage(message: String): String {
+    val index = message.indexOf("=== Source Location Trace")
+    if (index >= 0) {
+        return message.substring(0, index)
+    }
+    return message
+}
+
 fun writeLaunchInfo(context: Context) {
     try {
         val gson = Gson()

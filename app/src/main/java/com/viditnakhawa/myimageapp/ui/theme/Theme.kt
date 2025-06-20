@@ -79,9 +79,18 @@ val MaterialTheme.customColors: CustomColors
 @Composable
 fun MyImageAppTheme(
     darkTheme: Boolean = isSystemInDarkTheme(),
+    dynamicColor: Boolean = true, // allow opt-in for Material You
     content: @Composable () -> Unit
 ) {
-    val colorScheme = if (darkTheme) DarkColorScheme else LightColorScheme
+    val context = LocalView.current.context
+    val colorScheme = when {
+        dynamicColor && true -> {
+            if (darkTheme) dynamicDarkColorScheme(context) else dynamicLightColorScheme(context)
+        }
+        darkTheme -> DarkColorScheme
+        else -> LightColorScheme
+    }
+
     val customColorsPalette = if (darkTheme) darkCustomColors else lightCustomColors
 
     val view = LocalView.current
@@ -96,7 +105,7 @@ fun MyImageAppTheme(
     CompositionLocalProvider(LocalCustomColors provides customColorsPalette) {
         MaterialTheme(
             colorScheme = colorScheme,
-            typography = Typography, // Assuming Typography.kt exists in this package
+            typography = Typography,
             content = content
         )
     }

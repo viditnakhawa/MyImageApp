@@ -1,7 +1,9 @@
 package com.viditnakhawa.myimageapp
 
 import android.Manifest
+import android.content.Context
 import android.content.Intent
+import android.content.pm.PackageManager
 import android.net.Uri
 import android.os.Build
 import android.os.Bundle
@@ -13,17 +15,13 @@ import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.compose.setContent
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.activity.viewModels
-import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.material3.Button
 import androidx.compose.material3.IconButton
-import androidx.compose.material3.Text
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -42,87 +40,94 @@ import com.viditnakhawa.myimageapp.ui.theme.MyImageAppTheme
 import kotlinx.coroutines.launch
 import com.viditnakhawa.myimageapp.ui.common.ViewModelProvider
 import com.google.accompanist.permissions.ExperimentalPermissionsApi
-import com.google.accompanist.permissions.isGranted
-import com.google.accompanist.permissions.rememberPermissionState
 import androidx.activity.result.PickVisualMediaRequest
-import androidx.compose.animation.AnimatedContent
-import androidx.compose.animation.core.tween
-import androidx.compose.animation.fadeIn
-import androidx.compose.animation.fadeOut
-import androidx.compose.animation.slideInHorizontally
-import androidx.compose.animation.slideOutHorizontally
-import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
-import androidx.compose.ui.draw.clip
+import androidx.core.content.ContextCompat
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
+import androidx.work.ExistingWorkPolicy
 import com.viditnakhawa.myimageapp.data.ImageEntity
 import androidx.work.OneTimeWorkRequestBuilder
 import androidx.work.WorkManager
 import androidx.work.workDataOf
 import com.viditnakhawa.myimageapp.data.GEMMA_E2B_MODEL
+import com.viditnakhawa.myimageapp.ui.AddToCollectionDialog
+import com.viditnakhawa.myimageapp.ui.PermissionsScreen
+import com.viditnakhawa.myimageapp.ui.collections.CreateCollectionDialog
 import com.viditnakhawa.myimageapp.ui.modelmanager.ModelManagerViewModel
-import com.viditnakhawa.myimageapp.workers.SmartAnalysisWorker
+import com.viditnakhawa.myimageapp.workers.MultimodalAnalysisWorker
+import com.viditnakhawa.myimageapp.ui.navigation.AppNavigation
 
-class MainActivity : ComponentActivity() {
+
+/*class MainActivity : ComponentActivity() {
+
 
     private val viewModel: ImageViewModel by viewModels { ViewModelProvider.Factory }
+    private val modelManagerViewModel: ModelManagerViewModel by viewModels { ViewModelProvider.Factory }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         MLKitImgDescProcessor.initialize(applicationContext) // Initialize ML Kit
         // --- AUTOMATIC IMPORT ---
         // On app start, refresh the image list from the device's screenshots folder
-        lifecycleScope.launch {
-            (application as MyApplication).container.imageRepository.refreshImagesFromDevice(applicationContext)
-            val modelManagerViewModel: ModelManagerViewModel by viewModels { ViewModelProvider.Factory }
-            // Check if the model is downloaded but not yet initialized
-            if (!modelManagerViewModel.isGemmaInitialized() &&
-                (application as MyApplication).container.imageRepository.isGemmaModelDownloaded(this@MainActivity)) {
-                // Initialize it in the background
-                modelManagerViewModel.initializeModel(this@MainActivity, GEMMA_E2B_MODEL)
-            }
-        }
+//        lifecycleScope.launch {
+//            (application as MyApplication).container.imageRepository.refreshImagesFromDevice(applicationContext)
+//            val isModelDownloaded = (application as MyApplication).container.imageRepository.isGemmaModelDownloaded(this@MainActivity)
+//
+//            if (isModelDownloaded && !modelManagerViewModel.isGemmaInitialized()) {
+//                Log.d("MainActivity", "Model is downloaded but not initialized. Initializing in background...")
+//                modelManagerViewModel.initializeModel(this@MainActivity, GEMMA_E2B_MODEL)
+//            }
+//        }
         setContent {
             MyImageAppTheme {
-                //MyImageApp()
-                PermissionWrapper()
+                // We will now decide whether to show the PermissionsScreen or the main app
+                var allPermissionsGranted by remember {
+                    mutableStateOf(checkAllPermissions(this))
+                }
+
+                if (allPermissionsGranted) {
+                    // On app start, refresh the image list from the device's screenshots folder
+                    LaunchedEffect(Unit) {
+                        (application as MyApplication).container.imageRepository.refreshImagesFromDevice(applicationContext)
+                        val modelManagerViewModel: ModelManagerViewModel by viewModels { ViewModelProvider.Factory }
+                        // Check if the model is downloaded but not yet initialized
+                        if (!modelManagerViewModel.isGemmaInitialized() &&
+                            (application as MyApplication).container.imageRepository.isGemmaModelDownloaded(this@MainActivity)) {
+                            // Initialize it in the background
+                            modelManagerViewModel.initializeModel(this@MainActivity, GEMMA_E2B_MODEL)
+                        }
+                    }
+                    MyImageApp()
+                } else {
+                    PermissionsScreen(
+                        onPermissionsGranted = {
+                            allPermissionsGranted = true
+                        }
+                    )
+                }
             }
         }
     }
-    @OptIn(ExperimentalPermissionsApi::class)
-    @Composable
-    fun PermissionWrapper() {
-        // Define the permission we need based on Android version
-        val permission = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-            Manifest.permission.READ_MEDIA_IMAGES
-        } else {
-            Manifest.permission.READ_EXTERNAL_STORAGE
-        }
-        val permissionState = rememberPermissionState(permission)
 
-        if (permissionState.status.isGranted) {
-            // If permission is granted, launch the scan ONCE
-            LaunchedEffect(Unit) {
-                (application as MyApplication).container.imageRepository.refreshImagesFromDevice(applicationContext)
-            }
-            // And show the main app
-            MyImageApp()
+    private fun checkAllPermissions(context: Context): Boolean {
+        val permissionsToRequest = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            listOf(
+                Manifest.permission.READ_MEDIA_IMAGES,
+                Manifest.permission.CAMERA,
+                Manifest.permission.POST_NOTIFICATIONS
+            )
         } else {
-            // If permission is not granted, show a button to request it
-            Column(
-                modifier = Modifier.fillMaxSize(),
-                horizontalAlignment = Alignment.CenterHorizontally,
-                verticalArrangement = Arrangement.Center
-            ) {
-                Text("Permission needed to access screenshots.")
-                Button(onClick = { permissionState.launchPermissionRequest() }) {
-                    Text("Grant Permission")
-                }
-            }
+            listOf(
+                Manifest.permission.READ_EXTERNAL_STORAGE,
+                Manifest.permission.CAMERA
+            )
+        }
+        return permissionsToRequest.all {
+            ContextCompat.checkSelfPermission(context, it) == PackageManager.PERMISSION_GRANTED
         }
     }
 
@@ -132,10 +137,28 @@ class MainActivity : ComponentActivity() {
         var currentScreen by remember { mutableStateOf<Screen>(Screen.Gallery) }
         var selectedImageUri by remember { mutableStateOf<Uri?>(null) }
         var isLoadingAnalysis by remember { mutableStateOf(false) }
-
+        val isOcrRunning = remember { mutableStateOf(false) }
+        var rawOcrResult by remember { mutableStateOf<String?>(null) }
+        val collections by viewModel.collections.collectAsState()
+        var showCollectionDialog by remember { mutableStateOf(false) }
         val imageList by viewModel.images.collectAsState()
         val scope = rememberCoroutineScope()
         val modelManagerViewModel: ModelManagerViewModel = viewModel(factory = ViewModelProvider.Factory)
+        var showCreateCollectionDialog by remember { mutableStateOf(false) }
+        val collectionsWithImages by viewModel.collectionsWithImages.collectAsStateWithLifecycle()
+
+        if (showCreateCollectionDialog) {
+            CreateCollectionDialog(
+                onDismissRequest = { showCreateCollectionDialog = false },
+                onCreateClicked = { collectionName ->
+                    scope.launch {
+                        val newId = viewModel.createCollectionAndReturnId(collectionName)
+                        currentScreen = Screen.SelectScreenshots(newId)
+                        showCreateCollectionDialog = false
+                    }
+                }
+            )
+        }
 
         // This produceState block is correct and will now be the ONLY source for analysisResult
         val analysisResult by produceState<PostDetails?>(initialValue = null, key1 = selectedImageUri) {
@@ -165,9 +188,6 @@ class MainActivity : ComponentActivity() {
         ) { uris ->
             // The result is now a list of URIs
             if (uris.isNotEmpty()) {
-                // --- THE FIX IS HERE ---
-                // Before adding the images to our database, we must take
-                // persistent permission for each one.
                 try {
                     val contentResolver = applicationContext.contentResolver
                     uris.forEach { uri ->
@@ -187,9 +207,8 @@ class MainActivity : ComponentActivity() {
             }
         }
 
-        // --- IMPROVED BACK NAVIGATION ---
-        // This BackHandler will manage back presses for the entire app.
         BackHandler(enabled = currentScreen != Screen.Gallery) {
+            rawOcrResult = null // Clear temporary result on back press
             when (currentScreen) {
                 is Screen.Analysis -> currentScreen = Screen.Gallery
                 is Screen.FullScreenViewer -> currentScreen = Screen.Analysis
@@ -203,7 +222,8 @@ class MainActivity : ComponentActivity() {
             is Screen.Gallery -> {
                 ScreenshotsGalleryScreenWithFAB(
                     images = imageList,
-                    onAddCollectionClick = { /* TODO: Implement create collection logic */ },
+                    onViewCollectionsClick = { currentScreen = Screen.CollectionsList },
+                    onCreateCollectionClick = { showCreateCollectionDialog = true },
                     onCapturePhotoClick = { currentScreen = Screen.Camera },
                     onPickFromGalleryClick = {
                         pickMediaLauncher.launch(
@@ -226,31 +246,71 @@ class MainActivity : ComponentActivity() {
 
                             // Decide if we need to run an analysis
                             val needsSmartAnalysis = gemmaIsReady && imageDetails?.sourceApp == null
-                            val needsFallbackAnalysis = !gemmaIsReady && imageDetails == null
+                            val needsFallbackAnalysis = !gemmaIsReady && imageDetails?.sourceApp == null
 
                             //val needsAnalysis = viewModel.getImageDetails(uri)?.title == null
                             if (needsSmartAnalysis) {
                                 // Upgrade from fallback or analyze for the first time with Gemma
                                 val workManager = WorkManager.getInstance(applicationContext)
-                                val workRequest = OneTimeWorkRequestBuilder<SmartAnalysisWorker>()
+                                // --- STRATEGY PART 1: PRIORITIZE CLICKED IMAGE ---
+                                // Enqueue a high-priority worker for the specific image the user clicked.
+                                val analysisWorkRequest = OneTimeWorkRequestBuilder<MultimodalAnalysisWorker>()
                                     .setInputData(workDataOf("IMAGE_URI" to uri.toString()))
                                     .build()
-                                workManager.enqueue(workRequest)
-                            } else if (needsFallbackAnalysis) {
-                                // First time analysis, but Gemma isn't ready
-                                val fallbackAnalysis = MLKitImgDescProcessor.describeImage(applicationContext, uri)
-                                val entityToSave = ImageEntity(
-                                    imageUri = uri.toString(),
-                                    title = fallbackAnalysis.title,
-                                    content = fallbackAnalysis.content
-                                    // sourceApp remains null, marking this as a fallback
+                                workManager.enqueueUniqueWork(
+                                    "MultimodalAnalysis_${uri}", // A unique name for this specific image job
+                                    ExistingWorkPolicy.KEEP,
+                                    analysisWorkRequest
                                 )
+
+                                // --- STRATEGY PART 2: PROCESS OTHERS IN BACKGROUND ---
+                                // Also enqueue the background batch worker to handle all other images.
+//                                val batchWorkRequest = OneTimeWorkRequestBuilder<BatchAnalysisWorker>().build()
+//                                workManager.enqueueUniqueWork(
+//                                    "background_batch_analysis", // A generic name for the background task
+//                                    ExistingWorkPolicy.KEEP, // Don't start a new one if it's already running
+//                                    batchWorkRequest
+//                                )
+                            } else if (needsFallbackAnalysis) {
+                                val fallbackAnalysis = MLKitImgDescProcessor.describeImage(applicationContext, uri)
+
+                                // If the analysis fails, save it as a 'failed' state so the UI can update.
+                                // Otherwise, save the successful analysis.
+                                val entityToSave = if (fallbackAnalysis.content.startsWith("Error", ignoreCase = true)) {
+                                    (imageDetails ?: ImageEntity(imageUri = uri.toString())).copy(
+                                        title = "Analysis Failed",
+                                        content = fallbackAnalysis.content
+                                    )
+                                } else {
+                                    (imageDetails ?: ImageEntity(imageUri = uri.toString())).copy(
+                                        title = fallbackAnalysis.title,
+                                        content = fallbackAnalysis.content
+                                    )
+                                }
                                 viewModel.updateImageDetails(entityToSave)
                             }
                             // If neither condition is met, do nothing. The existing cached data is sufficient.
                         }
                     },
                     onManageModelClick = { currentScreen = Screen.ModelManager }
+                )
+            }
+
+            is Screen.CollectionsList -> {
+                CollectionsScreen(
+                    collections = collectionsWithImages,
+                    onNavigateBack = { currentScreen = Screen.Gallery }
+                )
+            }
+            is Screen.SelectScreenshots -> {
+                SelectScreenshotsScreen(
+                    allImages = imageList,
+                    onClose = { currentScreen = Screen.Gallery },
+                    onDone = { selectedUris ->
+                        val uriStrings = selectedUris.map { it.toString() }
+                        viewModel.addImagesToCollection(uriStrings, (currentScreen as Screen.SelectScreenshots).newCollectionId)
+                        currentScreen = Screen.CollectionsList
+                    }
                 )
             }
 
@@ -273,9 +333,14 @@ class MainActivity : ComponentActivity() {
                         imageUri = selectedImageUri!!,
                         // Show a loading state from `isLoadingAnalysis` OR if analysisResult is null
                         isLoading = isLoadingAnalysis || analysisResult == null,
+                        isOcrRunning = isOcrRunning.value,
                         details = analysisResult, // Pass the nullable details
-                        onClose = { currentScreen = Screen.Gallery },
-                        onAddToCollection = { /*TODO*/ },
+                        rawOcrText = rawOcrResult,
+                        onClose = {
+                            rawOcrResult = null
+                            currentScreen = Screen.Gallery
+                                  },
+                        onAddToCollection = {showCollectionDialog = true},
                         onShare = { uri ->
                             val shareIntent: Intent = Intent().apply {
                                 action = Intent.ACTION_SEND
@@ -293,17 +358,25 @@ class MainActivity : ComponentActivity() {
                         // --- CORRECTED LOGIC FOR onRecognizeText ---
                         onRecognizeText = { imageUri ->
                             scope.launch {
+                                isOcrRunning.value = true
+                                rawOcrResult = null
                                 // 1. Run the OCR process
-                                val ocrText = processImageWithOCR(applicationContext, imageUri)
-                                // 2. Get the current details from the database
-                                val currentDetails = viewModel.getImageDetails(imageUri) ?: ImageEntity(imageUri.toString())
-                                // 3. Update the entity and save it back to the database
-                                val updatedDetails = currentDetails.copy(
-                                    title = "Text Recognition (OCR)",
-                                    content = ocrText
-                                )
-                                viewModel.updateImageDetails(updatedDetails)
-                                // The UI will update automatically because produceState is listening for this change.
+                                val rawText = processImageWithOCR(applicationContext, imageUri)
+                                if (modelManagerViewModel.isGemmaInitialized()) {
+                                    // --- GEMMA PATH ---
+                                    Log.d("MainActivity", "Gemma is initialized. Polishing OCR text.")
+                                    val polishedText = modelManagerViewModel.polishTextWithGemma(rawText)
+                                    val currentDetails = viewModel.getImageDetails(imageUri) ?: ImageEntity(imageUri.toString())
+                                    val updatedDetails = currentDetails.copy(polishedOcr = polishedText)
+                                    viewModel.updateImageDetails(updatedDetails)
+                                    // The UI will update automatically from the database observer
+                                } else {
+                                    // --- FALLBACK PATH ---
+                                    Log.d("MainActivity", "Gemma not ready. Showing raw OCR.")
+                                    // Set the temporary state variable to show the raw text in its own card
+                                    rawOcrResult = rawText
+                                }
+                                isOcrRunning.value = false
                             }
                         },
 
@@ -346,8 +419,21 @@ class MainActivity : ComponentActivity() {
             is Screen.ModelManager -> {
                 ModelManagerScreen(onClose = { currentScreen = Screen.Gallery })
             }
+        }
 
-            Screen.FullScreenViewer -> TODO()
+        if (showCollectionDialog && selectedImageUri != null) {
+            val imageUriToAdd = selectedImageUri!! // Ensure it's not null
+            AddToCollectionDialog(
+                collections = collections,
+                onDismiss = { showCollectionDialog = false },
+                onCollectionSelected = { collectionId ->
+                    viewModel.addImageToCollection(imageUriToAdd.toString(), collectionId)
+                    // Optionally, show a toast or confirmation
+                },
+                onCreateCollection = { collectionName ->
+                    viewModel.createCollection(collectionName)
+                }
+            )
         }
     }
 
@@ -357,6 +443,9 @@ class MainActivity : ComponentActivity() {
         object Analysis : Screen()
         object FullScreenViewer : Screen()
         object ModelManager : Screen()
+        data class Chat(val imageUri: Uri) : Screen()
+        object CollectionsList : Screen()
+        data class SelectScreenshots(val newCollectionId: Long) : Screen()
     }
 }
 
@@ -390,5 +479,43 @@ fun FullScreenImageViewer(imageUri: Uri, onClose: () -> Unit) {
                 tint = Color.White
             )
         }
+    }
+}*/
+
+class MainActivity : ComponentActivity() {
+
+    private val modelManagerViewModel: ModelManagerViewModel by viewModels { ViewModelProvider.Factory }
+
+    override fun onCreate(savedInstanceState: Bundle?) {
+        super.onCreate(savedInstanceState)
+        MLKitImgDescProcessor.initialize(applicationContext)
+
+        setContent {
+            MyImageAppTheme {
+                var permissionsGranted by remember { mutableStateOf(checkAllPermissions()) }
+
+                if (permissionsGranted) {
+                    LaunchedEffect(Unit) {
+                        (application as MyApplication).container.imageRepository.refreshImagesFromDevice(applicationContext)
+                        val isModelDownloaded = (application as MyApplication).container.imageRepository.isGemmaModelDownloaded(this@MainActivity)
+                        if (isModelDownloaded && !modelManagerViewModel.isGemmaInitialized()) {
+                            modelManagerViewModel.initializeModel(this@MainActivity, GEMMA_E2B_MODEL)
+                        }
+                    }
+                    AppNavigation()
+                } else {
+                    PermissionsScreen(onPermissionsGranted = { permissionsGranted = true })
+                }
+            }
+        }
+    }
+
+    private fun checkAllPermissions(): Boolean {
+        val permissions = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            listOf(Manifest.permission.READ_MEDIA_IMAGES, Manifest.permission.CAMERA, Manifest.permission.POST_NOTIFICATIONS)
+        } else {
+            listOf(Manifest.permission.READ_EXTERNAL_STORAGE, Manifest.permission.CAMERA)
+        }
+        return permissions.all { ContextCompat.checkSelfPermission(this, it) == PackageManager.PERMISSION_GRANTED }
     }
 }
