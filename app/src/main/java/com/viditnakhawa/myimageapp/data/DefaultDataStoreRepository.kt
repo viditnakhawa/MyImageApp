@@ -6,8 +6,6 @@ import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.longPreferencesKey
 import androidx.datastore.preferences.core.stringPreferencesKey
-import com.google.gson.Gson
-import com.google.gson.reflect.TypeToken
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.runBlocking
 import android.security.keystore.KeyGenParameterSpec
@@ -17,10 +15,6 @@ import java.security.KeyStore
 import javax.crypto.Cipher
 import javax.crypto.KeyGenerator
 import javax.crypto.SecretKey
-
-// This class is a placeholder for the real one you'll need.
-// We'll fill this out later if you decide to add history or theming.
-
 
 data class AccessTokenData(
     val accessToken: String,
@@ -32,7 +26,6 @@ interface DataStoreRepository {
     fun saveAccessTokenData(accessToken: String, refreshToken: String, expiresAt: Long)
     fun clearAccessTokenData()
     fun readAccessTokenData(): AccessTokenData?
-    // Add other methods if needed later
 }
 
 class DefaultDataStoreRepository(

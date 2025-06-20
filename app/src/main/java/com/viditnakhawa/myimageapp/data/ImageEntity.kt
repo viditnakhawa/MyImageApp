@@ -17,5 +17,11 @@ data class ImageEntity(
     // We can rename aiSummary to content to be more generic
     var content: String? = null,
     //Source App used in SmartAnalysisWorker
-    var sourceApp: String? = null
+    var sourceApp: String? = null,
+    //For Storing OCR
+    var polishedOcr: String? = null,
+    //For the Delete Functionality
+    var isIgnored: Boolean = false,
+    // For storing the last time the image was modified
+    val lastModified: Long = 0L
 )

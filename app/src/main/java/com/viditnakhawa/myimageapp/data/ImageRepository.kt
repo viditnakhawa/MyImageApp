@@ -3,24 +3,22 @@ package com.viditnakhawa.myimageapp.data
 import android.content.ContentUris
 import android.content.Context
 import android.net.Uri
-import android.os.Build
 import android.os.Environment
 import android.provider.MediaStore
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.withContext
-import androidx.work.OneTimeWorkRequestBuilder
-import androidx.work.WorkManager
-import androidx.work.workDataOf
-import com.viditnakhawa.myimageapp.workers.ImageAnalysisWorker
 import kotlinx.coroutines.flow.firstOrNull
 import java.io.File
+import androidx.core.net.toUri
 
 class ImageRepository(private val imageDao: ImageDao) {
 
-    val allImages: Flow<List<Uri>> = imageDao.getAllImages().map { entityList ->
-        entityList.map { Uri.parse(it.imageUri) }
+    val allImages: Flow<List<Uri>> = imageDao.getAllImageUris().map { stringList ->
+        stringList.map { uriString ->
+            uriString.toUri()
+        }
     }
 
     suspend fun addImage(uri: Uri) {
@@ -32,8 +30,8 @@ class ImageRepository(private val imageDao: ImageDao) {
         imageDao.insertImages(entities)
     }
 
-    suspend fun deleteImage(uri: Uri) {
-        imageDao.deleteImage(uri.toString())
+    suspend fun ignoreImage(uri: Uri) {
+        imageDao.ignoreImage(uri.toString())
     }
 
     suspend fun updateImageSummary(uriString: String, summary: String) {
@@ -45,7 +43,6 @@ class ImageRepository(private val imageDao: ImageDao) {
             }
         }
     }
-
 
     //PHASE 1 CODE
     suspend fun getImageDetails(uri: Uri): ImageEntity? {
@@ -78,23 +75,19 @@ class ImageRepository(private val imageDao: ImageDao) {
      */
     suspend fun refreshImagesFromDevice(context: Context) {
         withContext(Dispatchers.IO) {
-            val deviceImageUris = mutableSetOf<String>()
             val collection =
-                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
-                    MediaStore.Images.Media.getContentUri(MediaStore.VOLUME_EXTERNAL)
-                } else {
-                    MediaStore.Images.Media.EXTERNAL_CONTENT_URI
-                }
+                MediaStore.Images.Media.getContentUri(MediaStore.VOLUME_EXTERNAL)
 
-            val projection = arrayOf(MediaStore.Images.Media._ID)
-            val selection = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+            val projection = arrayOf(
+                MediaStore.Images.Media._ID,
+                MediaStore.Images.Media.DISPLAY_NAME,
+                MediaStore.Images.Media.DATE_MODIFIED
+            )
+            val selection =
                 "${MediaStore.Images.Media.RELATIVE_PATH} LIKE ?"
-            } else {
-                "${MediaStore.Images.Media.DATA} LIKE ?"
-            }
+
             val selectionArgs = arrayOf("%${Environment.DIRECTORY_SCREENSHOTS}%")
 
-            // 1. Get all screenshot URIs from the device
             context.contentResolver.query(
                 collection,
                 projection,
@@ -103,37 +96,53 @@ class ImageRepository(private val imageDao: ImageDao) {
                 null
             )?.use { cursor ->
                 val idColumn = cursor.getColumnIndexOrThrow(MediaStore.Images.Media._ID)
+                val nameColumn = cursor.getColumnIndexOrThrow(MediaStore.Images.Media.DISPLAY_NAME)
+                val dateModifiedColumn = cursor.getColumnIndexOrThrow(MediaStore.Images.Media.DATE_MODIFIED)
+
                 while (cursor.moveToNext()) {
                     val id = cursor.getLong(idColumn)
-                    val contentUri: Uri = ContentUris.withAppendedId(
+                    val name = cursor.getString(nameColumn)
+                    val lastModified = cursor.getLong(dateModifiedColumn)
+
+                    val uri: Uri = ContentUris.withAppendedId(
                         MediaStore.Images.Media.EXTERNAL_CONTENT_URI,
                         id
                     )
-                    deviceImageUris.add(contentUri.toString())
-                }
-            }
 
-            // 2. Get all URIs currently in our database
-            val databaseImageUris = imageDao.getAllImageUris().toSet()
-
-            // 3. Find only the new images that are on the device but not in our database
-            val newImageUris = deviceImageUris - databaseImageUris
-
-            // 4. If there are new images, add them to the database
-            if (newImageUris.isNotEmpty()) {
-                val newImageEntities = newImageUris.map { ImageEntity(imageUri = it) }
-                imageDao.insertImages(newImageEntities)
-
-
-                val workManager = WorkManager.getInstance(context)
-                newImageUris.forEach { uri ->
-                    val workRequest = OneTimeWorkRequestBuilder<ImageAnalysisWorker>()
-                        .setInputData(workDataOf("IMAGE_URI" to uri))
-                        .build()
-                    workManager.enqueue(workRequest)
+                    // Check if image already exists in DB to avoid un-ignoring
+                    val existingImage = imageDao.getImageByUri(uri.toString()).firstOrNull()
+                    if (existingImage == null) {
+                        val imageEntity = ImageEntity(
+                            imageUri = uri.toString(),
+                            lastModified = lastModified,
+                            isIgnored = false
+                        )
+                        imageDao.insertImage(imageEntity)
+                    }
                 }
             }
         }
+    }
+
+    // --- Collection Functions ---
+    val collections: Flow<List<CollectionEntity>> = imageDao.getAllCollections()
+    val collectionsWithImages: Flow<List<CollectionWithImages>> = imageDao.getCollectionsWithImages()
+
+    suspend fun createCollection(name: String) {
+        imageDao.insertCollection(CollectionEntity(name = name))
+    }
+
+    suspend fun addImageToCollection(imageUri: String, collectionId: Long) {
+        imageDao.addImageToCollection(ImageCollectionCrossRef(imageUri = imageUri, collectionId = collectionId))
+    }
+
+    suspend fun createCollectionAndGetId(name: String): Long {
+        return imageDao.insertCollection(CollectionEntity(name = name))
+    }
+
+    suspend fun addImagesToCollection(imageUris: List<String>, collectionId: Long) {
+        val crossRefs = imageUris.map { ImageCollectionCrossRef(imageUri = it, collectionId = collectionId) }
+        imageDao.addImagesToCollection(crossRefs)
     }
 }
 

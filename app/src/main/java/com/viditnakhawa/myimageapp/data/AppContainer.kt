@@ -3,8 +3,6 @@ package com.viditnakhawa.myimageapp.data
 import android.content.Context
 import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.Preferences
-import com.viditnakhawa.myimageapp.data.GalleryLifecycleProvider
-
 
 /**
  * App container for Dependency injection.
