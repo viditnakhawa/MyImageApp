@@ -12,7 +12,7 @@ import kotlinx.coroutines.flow.Flow
 @Dao
 interface ImageDao {
 
-    @Query("SELECT * FROM images ORDER BY rowid DESC")
+    @Query("SELECT * FROM images ORDER BY lastModified DESC")
     fun getAllImages(): Flow<List<ImageEntity>>
 
     @Insert(onConflict = OnConflictStrategy.IGNORE)
@@ -57,5 +57,3 @@ interface ImageDao {
     @Query("SELECT * FROM collections WHERE id = :collectionId")
     suspend fun getCollectionWithImages(collectionId: Long): CollectionWithImages
 }
-
-

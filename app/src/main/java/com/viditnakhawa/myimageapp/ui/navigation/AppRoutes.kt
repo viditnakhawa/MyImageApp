@@ -6,6 +6,8 @@ object AppRoutes {
     const val COLLECTIONS = "collections"
     const val MODEL_MANAGER = "model_manager"
     const val CAMERA = "camera"
+    const val SETTINGS = "settings"
+    const val LICENSES = "licenses"
 
     // Argument keys
     const val URI_ARG = "uri"

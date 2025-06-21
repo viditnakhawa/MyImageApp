@@ -24,6 +24,8 @@ import com.viditnakhawa.myimageapp.ui.ModelManagerScreen
 import kotlinx.coroutines.launch
 import androidx.core.net.toUri
 import com.viditnakhawa.myimageapp.ui.AddToCollectionDialog
+import com.viditnakhawa.myimageapp.ui.LicensesScreen
+import com.viditnakhawa.myimageapp.ui.SettingsScreen
 
 @Composable
 fun AppNavigation() {
@@ -74,9 +76,17 @@ fun AppNavigation() {
                     navController.navigate(AppRoutes.analysisScreen(Uri.encode(uri.toString())))
                 },
                 onNavigateToCollections = { navController.navigate(AppRoutes.COLLECTIONS) },
-                onNavigateToModelManager = { navController.navigate(AppRoutes.MODEL_MANAGER) },
+                onNavigateToSettings = { navController.navigate(AppRoutes.SETTINGS) },
                 onNavigateToCamera = { navController.navigate(AppRoutes.CAMERA) }
             )
+        }
+
+        composable(AppRoutes.SETTINGS) {
+            SettingsScreen(navController = navController)
+        }
+
+        composable(AppRoutes.LICENSES) {
+            LicensesScreen(navController = navController)
         }
 
         composable(
