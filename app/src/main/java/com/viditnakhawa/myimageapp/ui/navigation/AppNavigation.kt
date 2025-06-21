@@ -119,9 +119,9 @@ fun AppNavigation() {
 
         composable(
             route = AppRoutes.SELECT_SCREENSHOTS_ROUTE,
-            arguments = listOf(navArgument(AppRoutes.COLLECTION_ID_ARG) { type = NavType.LongType })
+            arguments = listOf(navArgument(COLLECTION_ID_ARG) { type = NavType.LongType })
         ) { backStackEntry ->
-            val collectionId = backStackEntry.arguments?.getLong(AppRoutes.COLLECTION_ID_ARG) ?: return@composable
+            val collectionId = backStackEntry.arguments?.getLong(COLLECTION_ID_ARG) ?: return@composable
             val allImages by imageViewModel.images.collectAsStateWithLifecycle()
             SelectScreenshotsScreen(
                 allImages = allImages,
@@ -179,6 +179,7 @@ fun AppNavigation() {
             CollectionDetailScreen(
                 navController = navController,
                 imageViewModel = imageViewModel,
+                modelManagerViewModel = modelManagerViewModel,
                 collectionId = collectionId
             )
         }

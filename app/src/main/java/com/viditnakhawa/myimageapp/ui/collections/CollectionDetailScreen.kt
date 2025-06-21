@@ -20,9 +20,9 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.Close
-import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.GridView
 import androidx.compose.material.icons.filled.MoreVert
+import androidx.compose.material.icons.filled.Remove
 import androidx.compose.material.icons.filled.ViewAgenda
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.CircularProgressIndicator
@@ -57,12 +57,15 @@ import androidx.navigation.NavController
 import coil.compose.AsyncImage
 import coil.request.ImageRequest
 import com.viditnakhawa.myimageapp.ui.ImageViewModel
+import com.viditnakhawa.myimageapp.ui.modelmanager.ModelManagerViewModel
+import com.viditnakhawa.myimageapp.ui.navigation.AppRoutes
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun CollectionDetailScreen(
     navController: NavController,
     imageViewModel: ImageViewModel,
+    modelManagerViewModel: ModelManagerViewModel,
     collectionId: Long
 ) {
     val collectionWithImages by imageViewModel.getCollectionById(collectionId)
@@ -110,7 +113,7 @@ fun CollectionDetailScreen(
                             )
                             isSelectionMode = false
                         }) {
-                            Icon(Icons.Default.Delete, contentDescription = "Remove Selected Images")
+                            Icon(Icons.Default.Remove, contentDescription = "Remove Selected Images")
                         }
                         IconButton(onClick = { isSelectionMode = false }) {
                             Icon(Icons.Default.Close, contentDescription = "Exit Selection Mode")
@@ -141,7 +144,7 @@ fun CollectionDetailScreen(
                                 DropdownMenuItem(
                                     text = { Text("Add More Images") },
                                     onClick = {
-                                        // TODO: Navigate to a selection screen
+                                        navController.navigate(AppRoutes.selectScreenshotsScreen(collectionId))
                                         showMenu = false
                                     }
                                 )
@@ -197,7 +200,8 @@ fun CollectionDetailScreen(
                                         selectedImageUris + uri
                                     }
                                 } else {
-                                    // Navigate to viewer
+                                    imageViewModel.prepareForAnalysis(uri, modelManagerViewModel.isGemmaInitialized())
+                                    navController.navigate(AppRoutes.analysisScreen(Uri.encode(uri.toString())))
                                 }
                             }
                         )
