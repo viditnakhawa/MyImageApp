@@ -14,11 +14,11 @@ import androidx.camera.core.Preview
 import androidx.camera.core.AspectRatio
 import androidx.camera.lifecycle.ProcessCameraProvider
 import androidx.camera.view.PreviewView
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.FlipCameraAndroid
@@ -27,6 +27,7 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalLifecycleOwner
 import androidx.compose.ui.text.font.FontWeight
@@ -34,9 +35,11 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.core.content.ContextCompat
+import coil.compose.rememberAsyncImagePainter
 import com.google.accompanist.permissions.ExperimentalPermissionsApi
 import com.google.accompanist.permissions.isGranted
 import com.google.accompanist.permissions.rememberPermissionState
+import java.io.File
 import java.text.SimpleDateFormat
 import java.util.*
 
@@ -49,8 +52,10 @@ fun ComposeCameraScreen(
     val context = LocalContext.current
     val lifecycleOwner = LocalLifecycleOwner.current
     val cameraPermissionState = rememberPermissionState(android.Manifest.permission.CAMERA)
-    var lensFacing by remember { mutableStateOf(CameraSelector.LENS_FACING_BACK) }
-    var zoomLevel by remember { mutableStateOf(1f) }
+    var lensFacing by remember { mutableIntStateOf(CameraSelector.LENS_FACING_BACK) }
+    var zoomLevel by remember { mutableFloatStateOf(1f) }
+    var capturedUri by remember { mutableStateOf<Uri?>(null) }
+    var isImageCaptured by remember { mutableStateOf(false) }
 
     if (cameraPermissionState.status.isGranted) {
         Column(modifier = Modifier.fillMaxSize().background(Color.Black)) {
@@ -93,7 +98,7 @@ fun ComposeCameraScreen(
                         Preview.Builder()
                             .setTargetAspectRatio(AspectRatio.RATIO_16_9) // Set use case to 16:9
                             .build().also {
-                                it.setSurfaceProvider(previewView.surfaceProvider)
+                                it.surfaceProvider = previewView.surfaceProvider
                             },
                         imageCapture
                     )
@@ -103,7 +108,18 @@ fun ComposeCameraScreen(
                 }
 
                 // Camera Preview
-                AndroidView({ previewView }, modifier = Modifier.fillMaxSize())
+                if (!isImageCaptured) {
+                    AndroidView({ previewView }, modifier = Modifier.fillMaxSize())
+                } else {
+                    capturedUri?.let { uri ->
+                        Image(
+                            painter = rememberAsyncImagePainter(uri),
+                            contentDescription = "Captured image preview",
+                            modifier = Modifier.fillMaxSize(),
+                            contentScale = ContentScale.Crop
+                        )
+                    }
+                }
 
                 // Controls are now overlaid on the preview, at the bottom
                 Column(
@@ -134,7 +150,22 @@ fun ComposeCameraScreen(
                                 .size(80.dp)
                                 .border(4.dp, Color.White, CircleShape),
                             onClick = {
-                                captureImage(context, imageCapture, onImageCaptured)
+                                if (!isImageCaptured) {
+                                    captureImage(context, imageCapture) { tempUri ->
+                                        tempUri?.let {
+                                            capturedUri = it
+                                            isImageCaptured = true
+                                        }
+                                    }
+                                } else {
+                                    // Save to gallery and call onImageCaptured
+                                    capturedUri?.let { uri ->
+                                        saveImageToGallery(context, uri) { finalUri ->
+                                            onImageCaptured(finalUri)
+                                        }
+                                    }
+                                }
+
                             }
                         ) {
                             Box(
@@ -145,16 +176,39 @@ fun ComposeCameraScreen(
                         }
 
                         // Flip Camera Button
-                        IconButton(
-                            onClick = {
-                                lensFacing = if (lensFacing == CameraSelector.LENS_FACING_BACK) {
-                                    CameraSelector.LENS_FACING_FRONT
-                                } else {
-                                    CameraSelector.LENS_FACING_BACK
+                        if (isImageCaptured) {
+                            // Retake button
+                            IconButton(
+                                onClick = {
+                                    capturedUri = null
+                                    isImageCaptured = false
                                 }
+                            ) {
+                                Icon(
+                                    imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                                    contentDescription = "Retake",
+                                    tint = Color.White,
+                                    modifier = Modifier.size(32.dp)
+                                )
                             }
-                        ) {
-                            Icon(Icons.Default.FlipCameraAndroid, contentDescription = "Flip camera", tint = Color.White, modifier = Modifier.size(32.dp))
+                        } else {
+                            // Flip camera button
+                            IconButton(
+                                onClick = {
+                                    lensFacing = if (lensFacing == CameraSelector.LENS_FACING_BACK) {
+                                        CameraSelector.LENS_FACING_FRONT
+                                    } else {
+                                        CameraSelector.LENS_FACING_BACK
+                                    }
+                                }
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.FlipCameraAndroid,
+                                    contentDescription = "Flip camera",
+                                    tint = Color.White,
+                                    modifier = Modifier.size(32.dp)
+                                )
+                            }
                         }
                     }
                 }
@@ -205,12 +259,34 @@ private fun ZoomControls(currentZoom: Float, onZoomChange: (Float) -> Unit) {
     }
 }
 
-
 private fun captureImage(
     context: Context,
     imageCapture: ImageCapture,
-    onImageCaptured: (Uri) -> Unit
+    onTempImageCaptured: (Uri?) -> Unit
 ) {
+    val name = "temp_capture.jpg"
+    val file = File(context.cacheDir, name)
+    val outputOptions = ImageCapture.OutputFileOptions.Builder(file).build()
+
+    imageCapture.takePicture(
+        outputOptions,
+        ContextCompat.getMainExecutor(context),
+        object : ImageCapture.OnImageSavedCallback {
+            override fun onImageSaved(outputFileResults: ImageCapture.OutputFileResults) {
+                onTempImageCaptured(Uri.fromFile(file))
+            }
+
+            override fun onError(exception: ImageCaptureException) {
+                Toast.makeText(context, "Capture failed: ${exception.message}", Toast.LENGTH_SHORT).show()
+                Log.e("CameraCapture", "Capture failed", exception)
+                onTempImageCaptured(null)
+            }
+        }
+    )
+}
+
+private fun saveImageToGallery(context: Context, imageUri: Uri, onSaved: (Uri) -> Unit) {
+    val inputStream = context.contentResolver.openInputStream(imageUri) ?: return
     val name = SimpleDateFormat("yyyy-MM-dd-HH-mm-ss-SSS", Locale.US).format(System.currentTimeMillis())
     val contentValues = ContentValues().apply {
         put(MediaStore.MediaColumns.DISPLAY_NAME, name)
@@ -220,25 +296,15 @@ private fun captureImage(
         }
     }
 
-    val outputOptions = ImageCapture.OutputFileOptions.Builder(
-        context.contentResolver,
-        MediaStore.Images.Media.EXTERNAL_CONTENT_URI,
-        contentValues
-    ).build()
-
-    imageCapture.takePicture(
-        outputOptions,
-        ContextCompat.getMainExecutor(context),
-        object : ImageCapture.OnImageSavedCallback {
-            override fun onImageSaved(outputFileResults: ImageCapture.OutputFileResults) {
-                val savedUri = outputFileResults.savedUri ?: return
-                onImageCaptured(savedUri)
-            }
-
-            override fun onError(exception: ImageCaptureException) {
-                Toast.makeText(context, "Photo capture failed: ${exception.message}", Toast.LENGTH_SHORT).show()
-                Log.e("CameraCapture", "Photo capture failed: ${exception.message}", exception)
-            }
+    val uri = context.contentResolver.insert(MediaStore.Images.Media.EXTERNAL_CONTENT_URI, contentValues)
+    if (uri != null) {
+        context.contentResolver.openOutputStream(uri)?.use { outputStream ->
+            inputStream.copyTo(outputStream)
+            onSaved(uri)
         }
-    )
+    } else {
+        Toast.makeText(context, "Failed to save image", Toast.LENGTH_SHORT).show()
+    }
 }
+
+
