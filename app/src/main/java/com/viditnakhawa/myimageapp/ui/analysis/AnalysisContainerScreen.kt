@@ -23,6 +23,7 @@ fun AnalysisContainerScreen(
     val context = LocalContext.current
     var isLoading by remember { mutableStateOf(false) }
     var rawOcrResult by remember { mutableStateOf<String?>(null) }
+    var analysisMessage by remember { mutableStateOf("Analyzing...") }
     val analysisResult by produceState<PostDetails?>(initialValue = null, key1 = imageUri) {
         isLoading = true
         imageViewModel.getImageDetailsFlow(imageUri).collect { entity ->
@@ -40,12 +41,16 @@ fun AnalysisContainerScreen(
         }
     }
 
+    val isGemmaReady = modelManagerViewModel.isGemmaInitialized()
+
     AnalysisScreen(
         imageUri = imageUri,
         isLoading = isLoading || analysisResult == null,
         isOcrRunning = isLoading, // Re-use the same loading state for simplicity
         details = analysisResult,
         rawOcrText = rawOcrResult,
+        analysisMessage = analysisMessage,
+        isGemmaReady = isGemmaReady,
         onClose = { navController.popBackStack() },
         onImageClick = { uri -> navController.navigate(AppRoutes.viewerScreen(Uri.encode(uri.toString()))) },
         onAddToCollection = { onAddToCollection(imageUri) },
@@ -64,13 +69,18 @@ fun AnalysisContainerScreen(
             navController.popBackStack()
         },
         onRecognizeText = { uri ->
+            val isGemmaReady = modelManagerViewModel.isGemmaInitialized()
+            analysisMessage = if (isGemmaReady) "Polishing text with Gemma..." else "Extracting text with ML Kit..."
             isLoading = true
-            imageViewModel.performOcr(uri, modelManagerViewModel.isGemmaInitialized()) { rawText ->
-                rawOcrResult = rawText
+            imageViewModel.performOcr(uri, isGemmaReady) { rawText ->
+                if (rawText != null) {
+                    rawOcrResult = rawText
+                }
                 isLoading = false
             }
         },
         onAnalyzeWithGemma = { uri ->
+            analysisMessage = "Analyzing with Gemma..."
             if (modelManagerViewModel.isGemmaInitialized()) {
                 // val encodedUri = Uri.encode(uri.toString())
                 // navController.navigate("${AppRoutes.CHAT}/$encodedUri")

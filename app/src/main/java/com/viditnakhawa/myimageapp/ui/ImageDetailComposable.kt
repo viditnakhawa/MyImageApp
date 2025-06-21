@@ -1,4 +1,6 @@
-import android.net.Uri
+package com.viditnakhawa.myimageapp.ui
+
+/*import android.net.Uri
 import androidx.compose.foundation.layout.*
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
@@ -72,4 +74,4 @@ fun ImageDetailScreen(
             )
         }
     }
-}
+}*/

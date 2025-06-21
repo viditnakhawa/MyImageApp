@@ -1,6 +1,8 @@
 package com.viditnakhawa.myimageapp.ui
 
 import android.net.Uri
+import androidx.compose.animation.animateColorAsState
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
@@ -22,18 +24,24 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
-import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import coil.compose.AsyncImage
 import coil.request.ImageRequest
 import com.viditnakhawa.myimageapp.PostDetails
+import com.viditnakhawa.myimageapp.R
+import com.viditnakhawa.myimageapp.ui.theme.adjustColorBrightness
+import com.viditnakhawa.myimageapp.ui.theme.extractDominantColor
+import kotlinx.coroutines.launch
+
 
 private val UpgradeCardColor = Color(0xFF174D38)
 private val TagBackground = Color(0xFF4D1717)
 private val TagText = Color(0xFFF2F2F2)
+
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
 @Composable
@@ -49,21 +57,54 @@ fun AnalysisScreen(
     onDelete: (Uri) -> Unit,
     onRecognizeText: (Uri) -> Unit,
     onAnalyzeWithGemma: (Uri) -> Unit,
-    rawOcrText: String?
+    rawOcrText: String?,
+    analysisMessage: String = "Analyzing...",
+    isGemmaReady: Boolean
 ) {
     var noteText by remember { mutableStateOf("") }
     var isNoteEditable by remember { mutableStateOf(false) }
+    var aspectRatio by remember { mutableStateOf(9f / 16f) }
+    val context = LocalContext.current
+
+    // **THE FIX: More robust state and side-effect handling for color extraction.**
+    val initialColor = MaterialTheme.colorScheme.background
+    var dominantColor by remember { mutableStateOf(initialColor) }
+    val animatedBackgroundColor by animateColorAsState(
+        targetValue = dominantColor,
+        animationSpec = tween(durationMillis = 600),
+        label = "BackgroundFade"
+    )
+
+    // This LaunchedEffect will re-run ONLY when imageUri changes.
+    LaunchedEffect(imageUri) {
+        launch { // Launch a new coroutine for the suspend function
+            val rawColor = extractDominantColor(context, imageUri)
+            dominantColor = adjustColorBrightness(rawColor, 0.85f) // Darken for better text contrast
+        }
+    }
+
 
     // Using theme colors directly in the Scaffold.
     Scaffold(
-        containerColor = MaterialTheme.colorScheme.background,
+        containerColor = animatedBackgroundColor,
         topBar = {
             TopAppBar(
                 title = {
-                    Text(
-                        text = "Details",
-                        fontWeight = FontWeight.Bold
-                    )
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Text(
+                            text = "Details",
+                            fontWeight = FontWeight.Bold
+                        )
+                        if (isGemmaReady) {
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Icon(
+                                painter = painterResource(id = R.drawable.gemma_color),
+                                contentDescription = "Gemma Initialized",
+                                modifier = Modifier.size(24.dp),
+                                tint = Color.Unspecified // Use original drawable colors
+                            )
+                        }
+                    }
                 },
                 navigationIcon = {
                     IconButton(onClick = onClose) {
@@ -88,7 +129,14 @@ fun AnalysisScreen(
                         contentDescription = "Delete",
                         onClick = { onDelete(imageUri) }
                     )
-                }
+                },
+                // Make TopAppBar transparent to see the animated background
+                colors = TopAppBarDefaults.topAppBarColors(
+                    containerColor = Color.Transparent,
+                    titleContentColor = MaterialTheme.colorScheme.onSurface,
+                    navigationIconContentColor = MaterialTheme.colorScheme.onSurface,
+                    actionIconContentColor = MaterialTheme.colorScheme.onSurface
+                )
             )
         }
     ) { innerPadding ->
@@ -96,7 +144,6 @@ fun AnalysisScreen(
             modifier = Modifier
                 .padding(innerPadding)
                 .fillMaxSize()
-                .background(MaterialTheme.colorScheme.background)
                 .verticalScroll(rememberScrollState()),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
@@ -108,9 +155,8 @@ fun AnalysisScreen(
                         .fillMaxWidth(),
                     shape = RoundedCornerShape(24.dp),
                     colors = CardDefaults.cardColors(
-                        // Using surfaceVariant for a subtle card background.
-                        containerColor = MaterialTheme.colorScheme.surfaceVariant,
-                        contentColor = MaterialTheme.colorScheme.onSurfaceVariant
+                        containerColor = MaterialTheme.colorScheme.background,
+                        contentColor = MaterialTheme.colorScheme.onBackground
                     )
                 ) {
                     Column(
@@ -128,23 +174,40 @@ fun AnalysisScreen(
                         )
                     }
                 }
-            } else if (details != null) {
+            }  else if (details != null) {
+                // Build the image request with a listener to check dimensions
+                val imageRequest = ImageRequest.Builder(LocalContext.current)
+                    .data(imageUri)
+                    .crossfade(true)
+                    .listener(onSuccess = { _, result ->
+                        val drawable = result.drawable
+                        val width = drawable.intrinsicWidth
+                        val height = drawable.intrinsicHeight
+                        if (width > 0 && height > 0) {
+                            // Set aspect ratio based on orientation
+                            aspectRatio = if (width > height) {
+                                16f / 9f // Landscape
+                            } else {
+                                9f / 16f // Portrait
+                            }
+                        }
+                    })
+                    .build()
+
                 Spacer(modifier = Modifier.height(16.dp))
                 Box(
                     modifier = Modifier
                         .fillMaxWidth()
                         .padding(horizontal = 16.dp)
+                        .aspectRatio(aspectRatio)
                         .clip(RoundedCornerShape(24.dp))
                 ) {
                     AsyncImage(
-                        model = ImageRequest.Builder(LocalContext.current)
-                            .data(imageUri)
-                            .crossfade(true)
-                            .build(),
+                        model = imageRequest,
                         contentDescription = "Analyzed Image",
-                        contentScale = ContentScale.FillWidth,
+                        contentScale = ContentScale.Crop,
                         modifier = Modifier
-                            .fillMaxWidth()
+                            .fillMaxSize()
                             .clickable { onImageClick(imageUri) }
                     )
                     Column(
@@ -177,8 +240,9 @@ fun AnalysisScreen(
                         .padding(horizontal = 16.dp),
                     shape = RoundedCornerShape(24.dp),
                     colors = CardDefaults.cardColors(
-                        containerColor = MaterialTheme.colorScheme.surfaceVariant,
-                        contentColor = MaterialTheme.colorScheme.onSurfaceVariant
+                        containerColor = MaterialTheme.colorScheme.background,
+                        contentColor = MaterialTheme.colorScheme.onBackground
+
                     )
                 ) {
                     Column(modifier = Modifier.padding(24.dp)) {
@@ -267,8 +331,8 @@ fun AnalysisScreen(
                             .padding(horizontal = 16.dp),
                         shape = RoundedCornerShape(24.dp),
                         colors = CardDefaults.cardColors(
-                            containerColor = MaterialTheme.colorScheme.surfaceVariant,
-                            contentColor = MaterialTheme.colorScheme.onSurfaceVariant
+                            containerColor = MaterialTheme.colorScheme.background,
+                            contentColor = MaterialTheme.colorScheme.onBackground
                         )
                     ) {
                         Column(modifier = Modifier.padding(20.dp)) {
@@ -292,8 +356,8 @@ fun AnalysisScreen(
                         .clickable { isNoteEditable = true },
                     shape = RoundedCornerShape(16.dp),
                     colors = CardDefaults.cardColors(
-                        containerColor = MaterialTheme.colorScheme.surfaceVariant,
-                        contentColor = MaterialTheme.colorScheme.onSurfaceVariant
+                        containerColor = MaterialTheme.colorScheme.background,
+                        contentColor = MaterialTheme.colorScheme.onBackground
                     )
                 ) {
                     Column(modifier = Modifier.padding(20.dp)) {
@@ -316,7 +380,7 @@ fun AnalysisScreen(
                                     Icon(
                                         imageVector = Icons.Default.Check,
                                         contentDescription = "Save Note",
-                                        tint = Color.White
+                                        tint = MaterialTheme.colorScheme.onPrimary
                                     )
                                 }
                             }
@@ -353,7 +417,7 @@ private fun UpgradeCard() {
         ) {
             Icon(Icons.Default.WorkspacePremium, contentDescription = "Upgrade")
             Text(
-                text = "Get richer titles, tags, and summaries. Go to 'Manage Model' to download and initialize Gemma.",
+                text = "Get richer titles, tags, and summaries. Go to 'settings' to download Gemma",
                 style = MaterialTheme.typography.bodyMedium,
                 textAlign = TextAlign.Start
             )
@@ -426,7 +490,7 @@ private fun TooltipFab(
         Card(
             shape = RoundedCornerShape(8.dp),
             colors = CardDefaults.cardColors(
-                containerColor = Color.White.copy(alpha = 0.9f)
+                containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.9f)
             )
         ) {
             Text(text = label, modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp))
@@ -440,31 +504,3 @@ private fun TooltipFab(
         }
     }
 }
-
-//@Preview(showBackground = true, backgroundColor = 0xFFFFFFFF)
-//@Composable
-//fun AnalysisScreenPreview() {
-//    MaterialTheme {
-//        AnalysisScreen(
-//            imageUri = Uri.EMPTY,
-//            details = PostDetails(
-//                title = "A Beautiful Sunset",
-//                content = "A breathtaking view of the sun setting over the ocean, casting a warm orange glow across the water.",
-//                tags = listOf("Sunset", "Ocean", "Landscape", "Nature", "Beauty"),
-//                sourceApp = "Camera",
-//                isFallback = false,
-//                polishedOcr = "This is a polished version of the text extracted from the image using Gemma."
-//            ),
-//            isLoading = false,
-//            isOcrRunning = false,
-//            onClose = {},
-//            onImageClick = {},
-//            onAddToCollection = {},
-//            onShare = {},
-//            onDelete = {},
-//            onRecognizeText = {},
-//            onAnalyzeWithGemma = {},
-//            rawOcrText = "This is the raw OCR text extracted from the image by ML Kit."
-//        )
-//    }
-//}
