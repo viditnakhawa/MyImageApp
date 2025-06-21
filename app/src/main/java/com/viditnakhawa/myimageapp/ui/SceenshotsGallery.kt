@@ -1,6 +1,5 @@
 package com.viditnakhawa.myimageapp.ui
 
-import android.net.Uri
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
@@ -18,7 +17,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Camera
-import androidx.compose.material.icons.filled.Cancel
+import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.PhotoLibrary
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.*
@@ -32,26 +31,24 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.input.nestedscroll.nestedScroll
-import androidx.compose.ui.layout.ContentScale
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
-import coil.compose.AsyncImage
-import coil.request.ImageRequest
+import com.viditnakhawa.myimageapp.ui.gallery.GalleryImageItem
+import com.viditnakhawa.myimageapp.data.ImageEntity
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ScreenshotsGalleryScreenWithFAB(
-    images: List<Uri>,
+    images: List<ImageEntity>,
     onViewCollectionsClick: () -> Unit,
     onCreateCollectionClick: () -> Unit,
     onCapturePhotoClick: () -> Unit,
     onPickFromGalleryClick: () -> Unit,
-    onImageClick: (Uri) -> Unit,
+    onImageClick: (ImageEntity) -> Unit,
     onSettingsClick: () -> Unit
 ) {
     var fabMenuExpanded by remember { mutableStateOf(false) }
@@ -124,7 +121,7 @@ fun ScreenshotsGalleryScreenWithFAB(
                         shape = RoundedCornerShape(24.dp)
                     ) {
                         Icon(
-                            imageVector = if (!fabMenuExpanded) Icons.Default.Add else Icons.Default.Cancel,
+                            imageVector = if (!fabMenuExpanded) Icons.Default.Add else Icons.Default.Close,
                             contentDescription = "Add",
                             modifier = Modifier.size(38.dp),
                             tint = MaterialTheme.colorScheme.onPrimary
@@ -182,12 +179,12 @@ fun ScreenshotsGalleryScreenWithFAB(
                             modifier = Modifier
                                 .size(48.dp)
                                 .clip(RoundedCornerShape(16.dp))
-                                .background(MaterialTheme.colorScheme.secondaryContainer)
+                                .background(MaterialTheme.colorScheme.onPrimary)
                         ) {
                             Icon(
                                 imageVector = Icons.Default.Add,
                                 contentDescription = "Create Collection",
-                                tint = MaterialTheme.colorScheme.onSecondaryContainer
+                                tint = MaterialTheme.colorScheme.surfaceVariant
                             )
                         }
                     }
@@ -219,24 +216,10 @@ fun ScreenshotsGalleryScreenWithFAB(
                         }
                     }
                 }
-
-                items(items = images, key = { it.toString() }) { imageUri ->
-                    val imageModifier = if (isTwoColumnGrid) {
-                        Modifier
-                    } else {
-                        Modifier.aspectRatio(1f)
-                    }
-                    AsyncImage(
-                        model = ImageRequest.Builder(LocalContext.current)
-                            .data(imageUri)
-                            .size(256)
-                            .crossfade(true)
-                            .build(),
-                        contentDescription = "Screenshot",
-                        contentScale = ContentScale.Crop,
-                        modifier = imageModifier
-                            .clip(RoundedCornerShape(30.dp))
-                            .clickable { onImageClick(imageUri) }
+                items(items = images, key = { it.imageUri }) { imageEntity ->
+                    GalleryImageItem(
+                        image = imageEntity,
+                        onImageClick = onImageClick
                     )
                 }
             }
