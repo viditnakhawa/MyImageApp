@@ -11,7 +11,7 @@ import androidx.room.TypeConverters
  */
 @Database(
     entities = [ImageEntity::class, CollectionEntity::class, ImageCollectionCrossRef::class],
-    version = 5,
+    version = 6,
     exportSchema = false
 )
 @TypeConverters(Converters::class)
@@ -29,9 +29,7 @@ abstract class AppDatabase : RoomDatabase() {
                     AppDatabase::class.java,
                     "image_database"
                 )
-                    // 2. Since this is for development, we can remove migrations
-                    // and let Room create the new schema on a fresh install.
-                    .fallbackToDestructiveMigration(false) // Helpful for development
+                    .fallbackToDestructiveMigration()
                     .build()
                 INSTANCE = instance
                 instance

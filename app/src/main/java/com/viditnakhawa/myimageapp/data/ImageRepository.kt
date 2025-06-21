@@ -21,6 +21,9 @@ class ImageRepository(private val imageDao: ImageDao) {
         }
     }
 
+    val allImageEntities: Flow<List<ImageEntity>> = imageDao.getAllImageEntities()
+
+
     suspend fun addImage(uri: Uri) {
         imageDao.insertImage(ImageEntity(imageUri = uri.toString()))
     }
@@ -144,5 +147,22 @@ class ImageRepository(private val imageDao: ImageDao) {
         val crossRefs = imageUris.map { ImageCollectionCrossRef(imageUri = it, collectionId = collectionId) }
         imageDao.addImagesToCollection(crossRefs)
     }
+
+    fun getCollectionWithImagesById(collectionId: Long): Flow<CollectionWithImages?> {
+        return imageDao.getCollectionWithImagesById(collectionId)
+    }
+
+    suspend fun removeImagesFromCollection(uris: List<String>, collectionId: Long) {
+        imageDao.removeImagesFromCollection(uris, collectionId)
+    }
+
+    suspend fun deleteCollectionById(collectionId: Long) {
+        imageDao.deleteCollectionById(collectionId)
+    }
+
+    suspend fun updateCollectionName(collectionId: Long, newName: String) {
+        imageDao.updateCollectionName(collectionId, newName)
+    }
+
 }
 

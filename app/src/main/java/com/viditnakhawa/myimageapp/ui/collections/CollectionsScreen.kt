@@ -9,7 +9,6 @@ import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
@@ -22,7 +21,7 @@ import com.viditnakhawa.myimageapp.data.CollectionWithImages
 fun CollectionsScreen(
     collections: List<CollectionWithImages>,
     onNavigateBack: () -> Unit,
-    // onCollectionClick: (Long) -> Unit // To view a collection's details later
+    onCollectionClick: (Long) -> Unit
 ) {
     Scaffold(
         topBar = {
@@ -42,18 +41,18 @@ fun CollectionsScreen(
             verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
             items(collections) { collection ->
-                CollectionCard(collection)
+                CollectionCard(collection, onClick = { onCollectionClick(collection.collection.id) })
             }
         }
     }
 }
 
 @Composable
-private fun CollectionCard(collectionWithImages: CollectionWithImages) {
+private fun CollectionCard(collectionWithImages: CollectionWithImages, onClick: () -> Unit) {
     Card(
         modifier = Modifier.fillMaxWidth(),
         shape = RoundedCornerShape(16.dp),
-        onClick = { /* TODO: Navigate to collection detail view */ }
+        onClick = onClick
     ) {
         Column {
             // Row of preview images

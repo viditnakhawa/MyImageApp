@@ -36,6 +36,9 @@ class ImageViewModel(
             initialValue = emptyList()
         )
 
+    val allImages: Flow<List<ImageEntity>> = repository.allImageEntities
+
+
     val collections: StateFlow<List<CollectionEntity>> = repository.collections
         .stateIn(
             scope = viewModelScope,
@@ -107,6 +110,28 @@ class ImageViewModel(
     fun addImagesToCollection(imageUris: List<String>, collectionId: Long) {
         viewModelScope.launch(Dispatchers.IO) {
             repository.addImagesToCollection(imageUris, collectionId)
+        }
+    }
+
+    fun getCollectionById(collectionId: Long): Flow<CollectionWithImages?> {
+        return repository.getCollectionWithImagesById(collectionId)
+    }
+
+    fun removeImagesFromCollection(uris: List<String>, collectionId: Long) {
+        viewModelScope.launch(Dispatchers.IO) {
+            repository.removeImagesFromCollection(uris, collectionId)
+        }
+    }
+
+    fun deleteCollection(collectionId: Long) {
+        viewModelScope.launch(Dispatchers.IO) {
+            repository.deleteCollectionById(collectionId)
+        }
+    }
+
+    fun updateCollectionName(collectionId: Long, newName: String) {
+        viewModelScope.launch(Dispatchers.IO) {
+            repository.updateCollectionName(collectionId, newName)
         }
     }
 

@@ -9,9 +9,11 @@ object AppRoutes {
     const val SETTINGS = "settings"
     const val LICENSES = "licenses"
 
+
     // Argument keys
     const val URI_ARG = "uri"
     const val COLLECTION_ID_ARG = "collectionId"
+    const val COLLECTION_DETAIL = "collectionDetail"
 
     // Routes with arguments
     const val ANALYSIS_ROUTE = "analysis/{$URI_ARG}"
@@ -24,4 +26,5 @@ object AppRoutes {
     fun viewerScreen(uri: String) = "viewer/$uri"
     fun chatScreen(uri: String) = "chat/$uri"
     fun selectScreenshotsScreen(id: Long) = "select_screenshots/$id"
+    fun collectionDetailRoute(collectionId: Long): String = "$COLLECTION_DETAIL/$collectionId"
 }

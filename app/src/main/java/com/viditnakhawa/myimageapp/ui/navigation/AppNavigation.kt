@@ -23,9 +23,12 @@ import com.viditnakhawa.myimageapp.ui.ImageViewModel
 import com.viditnakhawa.myimageapp.ui.ModelManagerScreen
 import kotlinx.coroutines.launch
 import androidx.core.net.toUri
-import com.viditnakhawa.myimageapp.ui.AddToCollectionDialog
+import com.viditnakhawa.myimageapp.ui.collections.AddToCollectionDialog
 import com.viditnakhawa.myimageapp.ui.LicensesScreen
 import com.viditnakhawa.myimageapp.ui.SettingsScreen
+import com.viditnakhawa.myimageapp.ui.collections.CollectionDetailScreen
+import com.viditnakhawa.myimageapp.ui.navigation.AppRoutes.COLLECTION_DETAIL
+import com.viditnakhawa.myimageapp.ui.navigation.AppRoutes.COLLECTION_ID_ARG
 
 @Composable
 fun AppNavigation() {
@@ -161,9 +164,25 @@ fun AppNavigation() {
             val collections by imageViewModel.collectionsWithImages.collectAsStateWithLifecycle()
             CollectionsScreen(
                 collections = collections,
-                onNavigateBack = { navController.popBackStack() }
+                onNavigateBack = { navController.popBackStack() },
+                onCollectionClick = { collectionId ->
+                    navController.navigate(AppRoutes.collectionDetailRoute(collectionId))
+                }
             )
         }
+
+        composable(
+            route = "$COLLECTION_DETAIL/{$COLLECTION_ID_ARG}",
+            arguments = listOf(navArgument(COLLECTION_ID_ARG) { type = NavType.LongType })
+        ) { backStackEntry ->
+            val collectionId = backStackEntry.arguments?.getLong(COLLECTION_ID_ARG) ?: return@composable
+            CollectionDetailScreen(
+                navController = navController,
+                imageViewModel = imageViewModel,
+                collectionId = collectionId
+            )
+        }
+
 
         /* // --- CHAT FEATURE COMMENTED OUT AS REQUESTED ---
       composable(

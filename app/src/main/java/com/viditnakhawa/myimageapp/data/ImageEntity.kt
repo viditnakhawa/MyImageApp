@@ -25,3 +25,4 @@ data class ImageEntity(
     // For storing the last time the image was modified
     val lastModified: Long = 0L
 )
+

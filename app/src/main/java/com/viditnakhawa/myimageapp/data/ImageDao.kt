@@ -15,6 +15,9 @@ interface ImageDao {
     @Query("SELECT * FROM images ORDER BY lastModified DESC")
     fun getAllImages(): Flow<List<ImageEntity>>
 
+    @Query("SELECT * FROM images ORDER BY lastModified DESC")
+    fun getAllImageEntities(): Flow<List<ImageEntity>>
+
     @Insert(onConflict = OnConflictStrategy.IGNORE)
     suspend fun insertImage(image: ImageEntity): Long
 
@@ -56,4 +59,17 @@ interface ImageDao {
     @Transaction
     @Query("SELECT * FROM collections WHERE id = :collectionId")
     suspend fun getCollectionWithImages(collectionId: Long): CollectionWithImages
+
+    @Transaction
+    @Query("SELECT * FROM collections WHERE id = :collectionId")
+    fun getCollectionWithImagesById(collectionId: Long): Flow<CollectionWithImages?>
+
+    @Query("DELETE FROM image_collection_cross_ref WHERE imageUri IN (:uris) AND collectionId = :collectionId")
+    suspend fun removeImagesFromCollection(uris: List<String>, collectionId: Long)
+
+    @Query("DELETE FROM collections WHERE id = :collectionId")
+    suspend fun deleteCollectionById(collectionId: Long)
+
+    @Query("UPDATE collections SET name = :newName WHERE id = :collectionId")
+    suspend fun updateCollectionName(collectionId: Long, newName: String)
 }
