@@ -29,6 +29,10 @@ object LlmChatModelHelper {
     // Indexed by model name.
     private val cleanUpListeners: MutableMap<String, CleanUpListener> = mutableMapOf()
 
+    fun isModelInitialized(model: Model): Boolean {
+        return model.instance != null
+    }
+
     fun initialize(context: Context, model: Model, onDone: (String) -> Unit) {
         // Prepare options.
         val maxTokens =
@@ -136,7 +140,8 @@ object LlmChatModelHelper {
         model.instance = null
         Log.d(TAG, "Clean up done.")
     }
-
+    
+    @Synchronized
     fun runInference(
         model: Model,
         input: String,

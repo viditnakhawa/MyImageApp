@@ -95,11 +95,19 @@ class ModelManagerViewModel(
 
     private fun loadInitialState() {
         val model = GEMMA_E2B_MODEL
+        // Check if the model singleton already has an instance from this app session.
+        val isAlreadyInitialized = LlmChatModelHelper.isModelInitialized(model)
+        val initialInitStatus = if (isAlreadyInitialized) {
+            ModelInitializationStatus(ModelInitializationStatusType.INITIALIZED)
+        } else {
+            ModelInitializationStatus(ModelInitializationStatusType.NOT_INITIALIZED)
+        }
+
         val downloadStatus = getModelDownloadStatus(model, context)
         val initialState = ModelManagerUiState(
             tasks = listOf(ASK_IMAGE_TASK),
             modelDownloadStatus = mapOf(model.name to downloadStatus),
-            modelInitializationStatus = mapOf(model.name to ModelInitializationStatus(ModelInitializationStatusType.NOT_INITIALIZED))
+            modelInitializationStatus = mapOf(model.name to initialInitStatus)
         )
         _uiState.update { initialState }
     }
@@ -113,6 +121,10 @@ class ModelManagerViewModel(
     }
 
     override fun onCleared() {
+        // **THE FIX:** Do NOT clean up the model here. The model instance should
+        // persist for the entire application lifecycle. The OS will reclaim the
+        // memory when the app process is terminated.
+        // LlmChatModelHelper.cleanUp(GEMMA_E2B_MODEL) // <-- REMOVED THIS LINE
         super.onCleared()
         authService.dispose()
     }

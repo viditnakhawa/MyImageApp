@@ -1,19 +1,14 @@
 package com.viditnakhawa.myimageapp.ui.common.modelitem
 
-import android.content.Context
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.rounded.Cancel
 import androidx.compose.material.icons.rounded.Pause
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.runtime.Composable
-import com.viditnakhawa.myimageapp.data.Model
 import com.viditnakhawa.myimageapp.data.ModelDownloadStatus
 import com.viditnakhawa.myimageapp.data.ModelDownloadStatusType
-import com.viditnakhawa.myimageapp.data.Task
-import com.viditnakhawa.myimageapp.ui.common.DownloadAndTryButton
-import com.viditnakhawa.myimageapp.ui.modelmanager.ModelManagerViewModel
+
 
 /*@Composable
 fun ModelItemActionButton(

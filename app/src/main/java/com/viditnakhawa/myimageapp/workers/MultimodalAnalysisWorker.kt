@@ -30,6 +30,7 @@ class MultimodalAnalysisWorker(
         val repository = (applicationContext as MyApplication).container.imageRepository
 
         try {
+            LlmChatModelHelper.resetSession(GEMMA_E2B_MODEL)
             val bitmap = uriToBitmap(applicationContext, imageUri)
                 ?: return Result.failure()
 
@@ -63,15 +64,25 @@ class MultimodalAnalysisWorker(
     private fun createGemmaPrompt(): String {
         // This prompt expects the model to do all the work from the image alone.
         return """
-        You are a highly intelligent screenshot analysis engine. Analyze the provided image and generate a structured JSON object with the fields: "title", "summary", "sourceApp", "tags".
+        SYSTEM_TASK:
+        You are an expert-level screenshot classification and summarization agent. Your task is to analyze the provided image and respond ONLY with a valid, structured JSON object.
 
-        - From the image, determine the source application ("Twitter", "Gmail", "Unknown", etc.).
-        - Write a concise title (under 10 words).
-        - Write a concise summary of the screenshot's content and purpose.
-        - Extract 3-5 relevant keyword tags.
-        - Perform any necessary text recognition from the image internally to inform your analysis.
-
-        JSON_OUTPUT:
+        INSTRUCTIONS:
+        1.  **Analyze Image:** Examine the visual elements and any text in the screenshot.
+        2.  **Determine Source App:** Identify the application where the screenshot was taken (e.g., "Twitter", "Gmail", "Instagram", "Unknown").
+        3.  **Create Title:** Write a very short, descriptive title (max 10 words).
+        4.  **Create Summary:** Write a brief, one or two-sentence summary of the main content.
+        5.  **Extract Tags:** List 3 to 5 relevant keywords as an array of strings.
+        
+        JSON_SCHEMA:
+        {
+          "title": "string",
+          "summary": "string",
+          "sourceApp": "string",
+          "tags": ["string"]
+        }
+        
+        RESPONSE:
         """.trimIndent()
     }
 

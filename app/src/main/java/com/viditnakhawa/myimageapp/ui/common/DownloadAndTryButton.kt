@@ -1,6 +1,6 @@
 package com.viditnakhawa.myimageapp.ui.common
 
-
+/*
 import android.content.Context
 import android.content.Intent
 import android.util.Log
@@ -139,5 +139,5 @@ fun DownloadAndTryButton(
             Text("Try it")
         }
     }
-}
+}*/
 
