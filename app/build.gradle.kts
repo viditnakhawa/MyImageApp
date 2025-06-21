@@ -67,6 +67,8 @@ dependencies {
     implementation(libs.accompanist.permissions)
     implementation("androidx.compose.runtime:runtime-livedata:1.6.8")
     implementation("androidx.compose.animation:animation:1.6.8")
+    implementation("androidx.palette:palette-ktx:1.0.0")
+
 
     // --- CameraX ---
     implementation(libs.androidx.camera.core)
