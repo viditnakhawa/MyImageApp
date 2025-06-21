@@ -1,19 +1,26 @@
 package com.viditnakhawa.myimageapp.ui
 
 import android.net.Uri
-import androidx.compose.foundation.Image
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.expandIn
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.shrinkOut
+import androidx.compose.animation.slideInVertically
+import androidx.compose.animation.slideOutVertically
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.grid.GridCells
+import androidx.compose.foundation.lazy.grid.GridItemSpan
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.lazy.grid.rememberLazyGridState
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
-import androidx.compose.material.icons.filled.PhotoCamera
+import androidx.compose.material.icons.filled.Camera
 import androidx.compose.material.icons.filled.PhotoLibrary
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.*
@@ -24,17 +31,19 @@ import androidx.compose.ui.draw.blur
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import coil.compose.AsyncImage
 import coil.request.ImageRequest
-import com.viditnakhawa.myimageapp.R
 
+
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ScreenshotsGalleryScreenWithFAB(
     images: List<Uri>,
@@ -43,12 +52,12 @@ fun ScreenshotsGalleryScreenWithFAB(
     onCapturePhotoClick: () -> Unit,
     onPickFromGalleryClick: () -> Unit,
     onImageClick: (Uri) -> Unit,
-    onManageModelClick: () -> Unit,
-    onSettingsClick: () -> Unit = {}
+    onSettingsClick: () -> Unit
 ) {
     var fabMenuExpanded by remember { mutableStateOf(false) }
     val isAtLeastApi31 = true
     val gridState = rememberLazyGridState()
+    val scrollBehavior = TopAppBarDefaults.enterAlwaysScrollBehavior(rememberTopAppBarState())
 
     Box(modifier = Modifier.fillMaxSize()) {
         if (fabMenuExpanded) {
@@ -63,104 +72,10 @@ fun ScreenshotsGalleryScreenWithFAB(
         }
 
         Scaffold(
-            floatingActionButton = {
-                Column(
-                    modifier = Modifier.padding(12.dp),
-                    horizontalAlignment = Alignment.End,
-                    verticalArrangement = Arrangement.spacedBy(16.dp)
-                ) {
-                    FloatingActionButton(
-                        onClick = onManageModelClick,
-                        shape = RoundedCornerShape(24.dp),
-                        containerColor = MaterialTheme.colorScheme.secondaryContainer,
-                        contentColor = MaterialTheme.colorScheme.onSecondaryContainer,
-                        elevation = FloatingActionButtonDefaults.elevation(),
-                        modifier = Modifier.size(58.dp)
-                    ) {
-                        Image(
-                            painter = painterResource(id = R.drawable.gemma_color),
-                            contentDescription = "Manage Model",
-                            contentScale = ContentScale.Crop,
-                            modifier = Modifier
-                                .size(32.dp)
-                                .clip(RoundedCornerShape(24.dp))
-                        )
-                    }
-
-                    Box {
-                        FloatingActionButton(
-                            onClick = { fabMenuExpanded = true },
-                            containerColor = MaterialTheme.colorScheme.primary,
-                            shape = RoundedCornerShape(24.dp)
-                        ) {
-                            Icon(
-                                Icons.Default.Add,
-                                contentDescription = "Add",
-                                tint = MaterialTheme.colorScheme.onPrimary
-                            )
-                        }
-
-                        DropdownMenu(
-                            expanded = fabMenuExpanded,
-                            onDismissRequest = { fabMenuExpanded = false }
-                        ) {
-                            DropdownMenuItem(
-                                text = {
-                                    Row(verticalAlignment = Alignment.CenterVertically) {
-                                        Icon(
-                                            imageVector = Icons.Default.PhotoCamera,
-                                            contentDescription = "Capture",
-                                            modifier = Modifier.size(18.dp),
-                                            tint = MaterialTheme.colorScheme.primary
-                                        )
-                                        Spacer(modifier = Modifier.width(8.dp))
-                                        Text("Capture Photo")
-                                    }
-                                },
-                                onClick = {
-                                    fabMenuExpanded = false
-                                    onCapturePhotoClick()
-                                }
-                            )
-
-                            DropdownMenuItem(
-                                text = {
-                                    Row(verticalAlignment = Alignment.CenterVertically) {
-                                        Icon(
-                                            imageVector = Icons.Default.PhotoLibrary,
-                                            contentDescription = "Gallery",
-                                            modifier = Modifier.size(18.dp),
-                                            tint = MaterialTheme.colorScheme.primary
-                                        )
-                                        Spacer(modifier = Modifier.width(8.dp))
-                                        Text("Pick from Gallery")
-                                    }
-                                },
-                                onClick = {
-                                    fabMenuExpanded = false
-                                    onPickFromGalleryClick()
-                                }
-                            )
-                        }
-                    }
-                }
-            }
-        ) { innerPadding ->
-
-            LazyColumn(
-                modifier = Modifier
-                    .padding(innerPadding)
-                    .fillMaxSize(),
-                contentPadding = PaddingValues(bottom = 80.dp)
-            ) {
-                item {
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(horizontal = 16.dp, vertical = 12.dp),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
+            modifier = Modifier.nestedScroll(scrollBehavior.nestedScrollConnection),
+            topBar = {
+                TopAppBar(
+                    title = {
                         Text(
                             text = "SnapSuite",
                             style = MaterialTheme.typography.headlineSmall.copy(
@@ -169,6 +84,8 @@ fun ScreenshotsGalleryScreenWithFAB(
                                 color = MaterialTheme.colorScheme.onBackground
                             )
                         )
+                    },
+                    actions = {
                         IconButton(onClick = onSettingsClick) {
                             Icon(
                                 imageVector = Icons.Default.Settings,
@@ -176,17 +93,81 @@ fun ScreenshotsGalleryScreenWithFAB(
                                 tint = MaterialTheme.colorScheme.onBackground
                             )
                         }
+                    },
+                    scrollBehavior = scrollBehavior
+                )
+            },
+            floatingActionButton = {
+                Column(
+                    modifier = Modifier.padding(12.dp),
+                    horizontalAlignment = Alignment.End,
+                    verticalArrangement = Arrangement.spacedBy(16.dp)
+                ) {
+                    // Animated visibility for the expanded FAB options
+                    AnimatedVisibility(
+                        visible = fabMenuExpanded,
+                        enter = fadeIn() + expandIn(expandFrom = Alignment.BottomEnd),
+                        exit = fadeOut() + shrinkOut(shrinkTowards = Alignment.BottomEnd)
+                    ) {
+                        Column(
+                            horizontalAlignment = Alignment.End,
+                            verticalArrangement = Arrangement.spacedBy(16.dp)
+                        ) {
+                            TooltipFab(
+                                icon = Icons.Default.Camera,
+                                label = "Capture Photo",
+                                onClick = {
+                                    fabMenuExpanded = false
+                                    onCapturePhotoClick()
+                                }
+                            )
+                            TooltipFab(
+                                icon = Icons.Default.PhotoLibrary,
+                                label = "Pick from Gallery",
+                                onClick = {
+                                    fabMenuExpanded = false
+                                    onPickFromGalleryClick()
+                                }
+                            )
+                        }
+                    }
+
+                    FloatingActionButton(
+                        onClick = { fabMenuExpanded = !fabMenuExpanded },
+                        containerColor = MaterialTheme.colorScheme.primary,
+                        shape = RoundedCornerShape(24.dp)
+                    ) {
+                        Icon(
+                            Icons.Default.Add,
+                            contentDescription = "Add",
+                            tint = MaterialTheme.colorScheme.onPrimary
+                        )
                     }
                 }
+            }
+        ) { innerPadding ->
+            LazyVerticalGrid(
+                columns = GridCells.Adaptive(minSize = 128.dp),
+                state = gridState,
+                modifier = Modifier
+                    .padding(innerPadding)
+                    .fillMaxSize(),
+                contentPadding = PaddingValues(
+                    start = 8.dp,
+                    end = 8.dp,
+                    top = 8.dp,
+                    bottom = 80.dp // Padding for the FAB
+                ),
+                verticalArrangement = Arrangement.spacedBy(8.dp),
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                // The large title is now part of the TopAppBar and will collapse on scroll.
+                // We no longer need a separate header item for it here.
 
-                item {
-                    Spacer(modifier = Modifier.height(12.dp))
-                }
-
-                item {
+                item(span = { GridItemSpan(maxLineSpan) }) {
                     Row(
                         modifier = Modifier
-                            .padding(horizontal = 16.dp)
+                            .padding(horizontal = 8.dp, vertical = 12.dp)
                             .fillMaxWidth(),
                         horizontalArrangement = Arrangement.spacedBy(12.dp),
                         verticalAlignment = Alignment.CenterVertically
@@ -229,63 +210,78 @@ fun ScreenshotsGalleryScreenWithFAB(
                     }
                 }
 
-                item {
-                    Spacer(modifier = Modifier.height(24.dp))
+                item(span = { GridItemSpan(maxLineSpan) }) {
                     Text(
                         text = "Screenshots",
                         style = MaterialTheme.typography.titleMedium.copy(
                             fontWeight = FontWeight.SemiBold,
                             color = MaterialTheme.colorScheme.onBackground
                         ),
-                        modifier = Modifier.padding(start = 16.dp, bottom = 8.dp)
+                        modifier = Modifier.padding(start = 8.dp, top = 12.dp, bottom = 8.dp)
                     )
                 }
 
-                item {
-                    LazyVerticalGrid(
-                        state = gridState,
-                        columns = GridCells.Adaptive(minSize = 128.dp),
-                        modifier = Modifier.fillMaxHeight(),
-                        verticalArrangement = Arrangement.spacedBy(8.dp),
-                        horizontalArrangement = Arrangement.spacedBy(8.dp),
-                        contentPadding = PaddingValues(horizontal = 8.dp, vertical = 8.dp),
-                        userScrollEnabled = false
-                    ) {
-                        items(items = images, key = { it.toString() }) { imageUri ->
-                            AsyncImage(
-                                model = ImageRequest.Builder(LocalContext.current)
-                                    .data(imageUri)
-                                    .size(256)
-                                    .crossfade(true)
-                                    .build(),
-                                contentDescription = "Screenshot",
-                                contentScale = ContentScale.Crop,
-                                modifier = Modifier
-                                    .aspectRatio(1f)
-                                    .clip(RoundedCornerShape(30.dp))
-                                    .clickable { onImageClick(imageUri) }
-                            )
-                        }
-                    }
+                items(items = images, key = { it.toString() }) { imageUri ->
+                    AsyncImage(
+                        model = ImageRequest.Builder(LocalContext.current)
+                            .data(imageUri)
+                            .size(256)
+                            .crossfade(true)
+                            .build(),
+                        contentDescription = "Screenshot",
+                        contentScale = ContentScale.Crop,
+                        modifier = Modifier
+                            .aspectRatio(1f)
+                            .clip(RoundedCornerShape(30.dp))
+                            .clickable { onImageClick(imageUri) }
+                    )
                 }
             }
         }
     }
 }
 
-@Preview(showBackground = true, backgroundColor = 0xFF000000)
 @Composable
-fun ScreenshotsGalleryScreenPreview() {
-    MaterialTheme {
-        ScreenshotsGalleryScreenWithFAB(
-            images = listOf(),
-            onViewCollectionsClick = {},
-            onCreateCollectionClick = {},
-            onCapturePhotoClick = {},
-            onPickFromGalleryClick = {},
-            onImageClick = {},
-            onManageModelClick = {},
-            onSettingsClick = {}
-        )
+private fun TooltipFab(
+    icon: ImageVector,
+    label: String,
+    onClick: () -> Unit
+) {
+    Row(
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(8.dp)
+    ) {
+        Card(
+            shape = RoundedCornerShape(8.dp),
+            colors = CardDefaults.cardColors(
+                containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.9f)
+            )
+        ) {
+            Text(text = label, modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp))
+        }
+        FloatingActionButton(
+            onClick = onClick,
+            shape = CircleShape,
+            containerColor = MaterialTheme.colorScheme.primary
+        ) {
+            Icon(icon, contentDescription = label, tint = MaterialTheme.colorScheme.onPrimary)
+        }
     }
 }
+
+//
+//@Preview(showBackground = true, backgroundColor = 0xFFFFFFFF)
+//@Composable
+//fun ScreenshotsGalleryScreenPreview() {
+//    MaterialTheme {
+//        ScreenshotsGalleryScreenWithFAB(
+//            images = listOf(),
+//            onViewCollectionsClick = {},
+//            onCreateCollectionClick = {},
+//            onCapturePhotoClick = {},
+//            onPickFromGalleryClick = {},
+//            onImageClick = {},
+//            onSettingsClick = {}
+//        )
+//    }
+//}

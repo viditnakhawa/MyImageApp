@@ -18,7 +18,7 @@ fun GalleryScreen(
     onNavigateToAnalysis: (Uri) -> Unit,
     onNavigateToCollections: () -> Unit,
     onCreateCollection: () -> Unit,
-    onNavigateToModelManager: () -> Unit,
+    onNavigateToSettings: () -> Unit,
     onNavigateToCamera: () -> Unit,
 ) {
     val imageList by imageViewModel.images.collectAsStateWithLifecycle()
@@ -41,6 +41,6 @@ fun GalleryScreen(
         },
         onCapturePhotoClick = onNavigateToCamera,
         onPickFromGalleryClick = { pickMediaLauncher.launch(PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly)) },
-        onManageModelClick = onNavigateToModelManager
+        onSettingsClick = onNavigateToSettings
     )
 }

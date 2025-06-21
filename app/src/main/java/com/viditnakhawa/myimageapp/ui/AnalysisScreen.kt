@@ -13,7 +13,6 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.TextSnippet
 import androidx.compose.material.icons.filled.*
-import androidx.compose.material.icons.filled.TextSnippet
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -25,14 +24,13 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import coil.compose.AsyncImage
 import coil.request.ImageRequest
 import com.viditnakhawa.myimageapp.PostDetails
 
-private val AppBackground = Color(0xFFF2F2F2)
-private val CardColor = Color(0xFFCBCBCB)
 private val UpgradeCardColor = Color(0xFF174D38)
 private val TagBackground = Color(0xFF4D1717)
 private val TagText = Color(0xFFF2F2F2)
@@ -56,8 +54,9 @@ fun AnalysisScreen(
     var noteText by remember { mutableStateOf("") }
     var isNoteEditable by remember { mutableStateOf(false) }
 
+    // Using theme colors directly in the Scaffold.
     Scaffold(
-        containerColor = AppBackground,
+        containerColor = MaterialTheme.colorScheme.background,
         topBar = {
             TopAppBar(
                 title = {
@@ -72,49 +71,23 @@ fun AnalysisScreen(
                     }
                 },
                 actions = {
-                    Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                        IconButton(
-                            onClick = onAddToCollection,
-                            modifier = Modifier
-                                .size(30.dp)
-                                .clip(RoundedCornerShape(percent = 50))
-                                .background(MaterialTheme.colorScheme.primary)
-                        ) {
-                            Icon(
-                                imageVector = Icons.Default.Add,
-                                contentDescription = "Add to Collection",
-                                tint = MaterialTheme.colorScheme.onPrimary
-                            )
-                        }
+                    CircularActionButton(
+                        icon = Icons.Default.Add,
+                        contentDescription = "Add to Collection",
+                        onClick = onAddToCollection
+                    )
 
-                        IconButton(
-                            onClick = { onShare(imageUri) },
-                            modifier = Modifier
-                                .size(30.dp)
-                                .clip(RoundedCornerShape(percent = 50))
-                                .background(MaterialTheme.colorScheme.primary)
-                        ) {
-                            Icon(
-                                imageVector = Icons.Default.Share,
-                                contentDescription = "Share",
-                                tint = MaterialTheme.colorScheme.onPrimary
-                            )
-                        }
+                    CircularActionButton(
+                        icon = Icons.Default.Share,
+                        contentDescription = "Share",
+                        onClick = { onShare(imageUri) }
+                    )
 
-                        IconButton(
-                            onClick = { onDelete(imageUri) },
-                            modifier = Modifier
-                                .size(30.dp)
-                                .clip(RoundedCornerShape(percent = 50))
-                                .background(MaterialTheme.colorScheme.primary)
-                        ) {
-                            Icon(
-                                imageVector = Icons.Default.DeleteForever,
-                                contentDescription = "Delete",
-                                tint = MaterialTheme.colorScheme.onPrimary
-                            )
-                        }
-                    }
+                    CircularActionButton(
+                        icon = Icons.Default.DeleteForever,
+                        contentDescription = "Delete",
+                        onClick = { onDelete(imageUri) }
+                    )
                 }
             )
         }
@@ -123,7 +96,7 @@ fun AnalysisScreen(
             modifier = Modifier
                 .padding(innerPadding)
                 .fillMaxSize()
-                .background(AppBackground)
+                .background(MaterialTheme.colorScheme.background)
                 .verticalScroll(rememberScrollState()),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
@@ -135,8 +108,9 @@ fun AnalysisScreen(
                         .fillMaxWidth(),
                     shape = RoundedCornerShape(24.dp),
                     colors = CardDefaults.cardColors(
-                        containerColor = CardColor,
-                        contentColor = Color.Black
+                        // Using surfaceVariant for a subtle card background.
+                        containerColor = MaterialTheme.colorScheme.surfaceVariant,
+                        contentColor = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                 ) {
                     Column(
@@ -159,7 +133,6 @@ fun AnalysisScreen(
                 Box(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .aspectRatio(9f / 16f)
                         .padding(horizontal = 16.dp)
                         .clip(RoundedCornerShape(24.dp))
                 ) {
@@ -169,9 +142,9 @@ fun AnalysisScreen(
                             .crossfade(true)
                             .build(),
                         contentDescription = "Analyzed Image",
-                        contentScale = ContentScale.Crop,
+                        contentScale = ContentScale.FillWidth,
                         modifier = Modifier
-                            .fillMaxSize()
+                            .fillMaxWidth()
                             .clickable { onImageClick(imageUri) }
                     )
                     Column(
@@ -204,8 +177,8 @@ fun AnalysisScreen(
                         .padding(horizontal = 16.dp),
                     shape = RoundedCornerShape(24.dp),
                     colors = CardDefaults.cardColors(
-                        containerColor = CardColor,
-                        contentColor = Color.Black
+                        containerColor = MaterialTheme.colorScheme.surfaceVariant,
+                        contentColor = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                 ) {
                     Column(modifier = Modifier.padding(24.dp)) {
@@ -235,18 +208,10 @@ fun AnalysisScreen(
                             Spacer(modifier = Modifier.height(16.dp))
                             FlowRow(
                                 horizontalArrangement = Arrangement.spacedBy(8.dp),
-                                verticalArrangement = Arrangement.spacedBy(8.dp)
+                                verticalArrangement = Arrangement.spacedBy(4.dp) // this will now behave as expected
                             ) {
                                 details.tags.forEach { tag ->
-                                    AssistChip(
-                                        onClick = {},
-                                        label = { Text(tag) },
-                                        shape = RoundedCornerShape(50),
-                                        colors = AssistChipDefaults.assistChipColors(
-                                            containerColor = TagBackground,
-                                            labelColor = TagText
-                                        )
-                                    )
+                                    CompactChip(tag)
                                 }
                             }
                         }
@@ -264,8 +229,7 @@ fun AnalysisScreen(
                     }
                 }
 
-                // This card will appear automatically once the polishedOcr field is saved to the database.
-                if (!details?.polishedOcr.isNullOrBlank()) {
+                if (!details.polishedOcr.isNullOrBlank()) {
                     Spacer(modifier = Modifier.height(16.dp))
                     Card(
                         modifier = Modifier
@@ -286,7 +250,7 @@ fun AnalysisScreen(
                             Spacer(modifier = Modifier.height(12.dp))
                             SelectionContainer {
                                 Text(
-                                    text = details!!.polishedOcr!!,
+                                    text = details.polishedOcr,
                                     style = MaterialTheme.typography.bodyLarge,
                                     lineHeight = 22.sp
                                 )
@@ -303,8 +267,8 @@ fun AnalysisScreen(
                             .padding(horizontal = 16.dp),
                         shape = RoundedCornerShape(24.dp),
                         colors = CardDefaults.cardColors(
-                            containerColor = CardColor,
-                            contentColor = Color.Black
+                            containerColor = MaterialTheme.colorScheme.surfaceVariant,
+                            contentColor = MaterialTheme.colorScheme.onSurfaceVariant
                         )
                     ) {
                         Column(modifier = Modifier.padding(20.dp)) {
@@ -328,8 +292,8 @@ fun AnalysisScreen(
                         .clickable { isNoteEditable = true },
                     shape = RoundedCornerShape(16.dp),
                     colors = CardDefaults.cardColors(
-                        containerColor = Color.White,
-                        contentColor = Color.Black
+                        containerColor = MaterialTheme.colorScheme.surfaceVariant,
+                        contentColor = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                 ) {
                     Column(modifier = Modifier.padding(20.dp)) {
@@ -398,6 +362,58 @@ private fun UpgradeCard() {
 }
 
 @Composable
+fun CircularActionButton(
+    icon: ImageVector,
+    contentDescription: String,
+    onClick: () -> Unit,
+    backgroundColor: Color = MaterialTheme.colorScheme.primary,
+    iconTint: Color = MaterialTheme.colorScheme.onPrimary
+) {
+    IconButton(
+        onClick = onClick,
+        modifier = Modifier
+            .padding(horizontal = 4.dp)
+            .size(40.dp) // full tap area
+    ) {
+        // Visual circle smaller than button size
+        Box(
+            modifier = Modifier
+                .size(28.dp) // <- visual circle size
+                .clip(CircleShape)
+                .background(backgroundColor),
+            contentAlignment = Alignment.Center
+        ) {
+            Icon(
+                imageVector = icon,
+                contentDescription = contentDescription,
+                tint = iconTint,
+                modifier = Modifier.size(16.dp) // smaller icon inside
+            )
+        }
+    }
+}
+
+@Composable
+fun CompactChip(tag: String) {
+    Card(
+        shape = RoundedCornerShape(50),
+        colors = CardDefaults.cardColors(
+            containerColor = TagBackground,
+            contentColor = TagText
+        ),
+        modifier = Modifier
+            .padding(0.dp)
+            .defaultMinSize(minHeight = 24.dp)
+    ) {
+        Text(
+            text = tag,
+            style = MaterialTheme.typography.labelSmall,
+            modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
+        )
+    }
+}
+
+@Composable
 private fun TooltipFab(
     icon: ImageVector,
     label: String,
@@ -424,3 +440,31 @@ private fun TooltipFab(
         }
     }
 }
+
+//@Preview(showBackground = true, backgroundColor = 0xFFFFFFFF)
+//@Composable
+//fun AnalysisScreenPreview() {
+//    MaterialTheme {
+//        AnalysisScreen(
+//            imageUri = Uri.EMPTY,
+//            details = PostDetails(
+//                title = "A Beautiful Sunset",
+//                content = "A breathtaking view of the sun setting over the ocean, casting a warm orange glow across the water.",
+//                tags = listOf("Sunset", "Ocean", "Landscape", "Nature", "Beauty"),
+//                sourceApp = "Camera",
+//                isFallback = false,
+//                polishedOcr = "This is a polished version of the text extracted from the image using Gemma."
+//            ),
+//            isLoading = false,
+//            isOcrRunning = false,
+//            onClose = {},
+//            onImageClick = {},
+//            onAddToCollection = {},
+//            onShare = {},
+//            onDelete = {},
+//            onRecognizeText = {},
+//            onAnalyzeWithGemma = {},
+//            rawOcrText = "This is the raw OCR text extracted from the image by ML Kit."
+//        )
+//    }
+//}
