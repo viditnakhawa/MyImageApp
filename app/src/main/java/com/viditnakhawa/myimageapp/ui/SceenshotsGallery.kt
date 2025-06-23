@@ -1,21 +1,23 @@
 package com.viditnakhawa.myimageapp.ui
 
+import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.tween
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.GridItemSpan
-import androidx.compose.material.icons.filled.ViewAgenda
 import androidx.compose.material.icons.filled.GridView
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.lazy.grid.rememberLazyGridState
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.CalendarViewMonth
 import androidx.compose.material.icons.filled.Camera
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.PhotoLibrary
@@ -208,7 +210,7 @@ fun ScreenshotsGalleryScreenWithFAB(
                         )
                         IconButton(onClick = { isTwoColumnGrid = !isTwoColumnGrid }) {
                             Icon(
-                                imageVector = if (isTwoColumnGrid) Icons.Default.GridView else Icons.Default.ViewAgenda,
+                                imageVector = if (isTwoColumnGrid) Icons.Default.GridView else Icons.Default.CalendarViewMonth,
                                 contentDescription = "Toggle Grid Layout",
                                 modifier = Modifier.size(18.dp),
                                 tint = MaterialTheme.colorScheme.onBackground
@@ -219,7 +221,8 @@ fun ScreenshotsGalleryScreenWithFAB(
                 items(items = images, key = { it.imageUri }) { imageEntity ->
                     GalleryImageItem(
                         image = imageEntity,
-                        onImageClick = onImageClick
+                        onImageClick = onImageClick,
+                        isTwoColumnLayout = isTwoColumnGrid
                     )
                 }
             }
@@ -232,6 +235,7 @@ private fun TooltipFab(
     icon: ImageVector,
     label: String,
     onClick: () -> Unit,
+    labelVisible: Boolean,
     modifier: Modifier = Modifier
 ) {
     Row(
@@ -239,104 +243,100 @@ private fun TooltipFab(
         horizontalArrangement = Arrangement.spacedBy(8.dp),
         modifier = modifier
     ) {
-        Card(
-            shape = RoundedCornerShape(8.dp),
-            colors = CardDefaults.cardColors(
-                containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.9f)
-            )
+        AnimatedVisibility(
+            visible = labelVisible,
+            enter = fadeIn(tween(150)),
+            exit = fadeOut(tween(100))
         ) {
-            Text(text = label, modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp))
+            Box(
+                modifier = Modifier
+                    .background(
+                        color = MaterialTheme.colorScheme.onSurfaceVariant.copy( alpha = 0.8f),
+                        shape = RoundedCornerShape(12.dp)
+                    )
+                    .padding(horizontal = 12.dp, vertical = 6.dp)
+            ) {
+                Text(
+                    text = label,
+                    color = Color.White,
+                    style = MaterialTheme.typography.labelMedium
+                )
+            }
         }
-        FloatingActionButton(
+
+        SmallFloatingActionButton(
             onClick = onClick,
-            shape = CircleShape,
-            containerColor = MaterialTheme.colorScheme.primary,
-            modifier = Modifier.size(40.dp) //ALIGNMENT NEEDED..................................
+            containerColor = MaterialTheme.colorScheme.surfaceVariant,
+            contentColor = MaterialTheme.colorScheme.onSurfaceVariant,
+            shape = RoundedCornerShape(20.dp)
         ) {
-            Icon(icon, contentDescription = label,
-                modifier = Modifier.size(20.dp),
-                tint = MaterialTheme.colorScheme.onPrimary
-            )
+            Icon(imageVector = icon, contentDescription = label)
         }
     }
 }
-
 @Composable
 private fun AnimatedFabMenu(
     expanded: Boolean,
     onCapturePhotoClick: () -> Unit,
     onPickFromGalleryClick: () -> Unit
 ) {
+    var areLabelsVisible by remember { mutableStateOf(false) }
+    val menuAnimationProgress = remember { Animatable(0f) }
     val scope = rememberCoroutineScope()
-
-    // Use two-state animation objects
-    val cameraOffsetY = remember { Animatable(0f) }
-    val galleryOffsetY = remember { Animatable(0f) }
-    val alphaCamera = remember { Animatable(0f) }
-    val alphaGallery = remember { Animatable(0f) }
 
     LaunchedEffect(expanded) {
         if (expanded) {
-            // Parallel launch with proper delay between them
-            scope.launch {
-                galleryOffsetY.animateTo(-10f, tween(250))
-                alphaGallery.animateTo(50f, tween(250))
-            }
-            delay(100)
-            scope.launch {
-                cameraOffsetY.animateTo(-20f, tween(250))
-                alphaCamera.animateTo(25f, tween(250))
-            }
+            areLabelsVisible = true
+            menuAnimationProgress.animateTo(1f, tween(durationMillis = 250))
         } else {
-            // Collapse both in reverse order
+            areLabelsVisible = false
             scope.launch {
-                cameraOffsetY.animateTo(100f, tween(250))
-                alphaCamera.animateTo(0f, tween(200))
-            }
-            delay(100)
-            scope.launch {
-                galleryOffsetY.animateTo(70f, tween(250))
-                alphaGallery.animateTo(0f, tween(200))
+                delay(100)
+                menuAnimationProgress.animateTo(0f, tween(durationMillis = 200))
             }
         }
     }
 
-    Box(contentAlignment = Alignment.BottomEnd) {
-        Column(horizontalAlignment = Alignment.End) {
+    val alpha = menuAnimationProgress.value
+    val offsetY = (1 - menuAnimationProgress.value) * 20f
+
+    if (alpha > 0f) {
+        Column(
+            horizontalAlignment = Alignment.End,
+            verticalArrangement = Arrangement.spacedBy(12.dp),
+            modifier = Modifier
+                .alpha(alpha)
+                .offset(y = offsetY.dp)
+        ) {
             TooltipFab(
                 icon = Icons.Default.Camera,
-                label = "Capture Photo",
+                label = "Camera",
                 onClick = onCapturePhotoClick,
-                modifier = Modifier
-                    .offset(y = cameraOffsetY.value.dp)
-                    .alpha(alphaCamera.value)
+                labelVisible = areLabelsVisible
             )
-            Spacer(modifier = Modifier.height(6.dp)) // Tighter spacing
+
             TooltipFab(
                 icon = Icons.Default.PhotoLibrary,
-                label = "Pick from Gallery",
+                label = "Gallery",
                 onClick = onPickFromGalleryClick,
-                modifier = Modifier
-                    .offset(y = galleryOffsetY.value.dp)
-                    .alpha(alphaGallery.value)
+                labelVisible = areLabelsVisible
             )
         }
     }
 }
 
-
-@Preview(showBackground = true, backgroundColor = 0xFFFFFFFF)
-@Composable
-fun ScreenshotsGalleryScreenPreview() {
-    MaterialTheme {
-        ScreenshotsGalleryScreenWithFAB(
-            images = listOf(),
-            onViewCollectionsClick = {},
-            onCreateCollectionClick = {},
-            onCapturePhotoClick = {},
-            onPickFromGalleryClick = {},
-            onImageClick = {},
-            onSettingsClick = {}
-        )
-    }
-}
+//@Preview(showBackground = true, backgroundColor = 0xFFFFFFFF)
+//@Composable
+//fun ScreenshotsGalleryScreenPreview() {
+//    MaterialTheme {
+//        ScreenshotsGalleryScreenWithFAB(
+//            images = listOf(),
+//            onViewCollectionsClick = {},
+//            onCreateCollectionClick = {},
+//            onCapturePhotoClick = {},
+//            onPickFromGalleryClick = {},
+//            onImageClick = {},
+//            onSettingsClick = {}
+//        )
+//    }
+//}

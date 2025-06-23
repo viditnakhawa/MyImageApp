@@ -3,6 +3,7 @@ package com.viditnakhawa.myimageapp.ui.gallery
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.aspectRatio
@@ -26,6 +27,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.core.net.toUri
@@ -35,7 +37,6 @@ import com.viditnakhawa.myimageapp.data.ImageEntity
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
-
 /**
  * A dedicated composable for displaying a single image in the gallery grid.
  * It includes logic to overlay the title if one exists.
@@ -43,8 +44,25 @@ import kotlinx.coroutines.launch
 @Composable
 fun GalleryImageItem(
     image: ImageEntity,
-    onImageClick: (ImageEntity) -> Unit
+    onImageClick: (ImageEntity) -> Unit,
+    isTwoColumnLayout: Boolean,
 ) {
+
+    val interactionModifier = Modifier
+        .pointerInput(image.imageUri) {
+            detectTapGestures(
+                onTap = { onImageClick(image) }
+            )
+        }
+        .aspectRatio(1f)
+
+    if (isTwoColumnLayout) {
+        // --- For the 2-column grid, use the new Card with the interaction modifier ---
+        GalleryImageCard(
+            image = image,
+            modifier = interactionModifier
+        )
+    } else {
     var showTitleOverlay by remember { mutableStateOf(false) }
     val scope = rememberCoroutineScope()
     val titleAlpha by animateFloatAsState(
@@ -84,7 +102,7 @@ fun GalleryImageItem(
                 model = ImageRequest.Builder(LocalContext.current)
                     .data(image.imageUri.toUri())
                     .crossfade(true)
-                    .size(256)
+                    .size(if (isTwoColumnLayout) 512 else 256)
                     .allowHardware(false)
                     .build(),
                 placeholder = ColorPainter(MaterialTheme.colorScheme.surfaceVariant),
@@ -100,10 +118,12 @@ fun GalleryImageItem(
                         .alpha(titleAlpha) // Apply the animated alpha here
                         .background(
                             Brush.verticalGradient(
-                                colors = listOf(Color.Transparent, Color.Black.copy(alpha = 0.8f)),
+                                colors = listOf(
+                                    Color.Transparent,
+                                    Color.Black.copy(alpha = 0.8f)
+                                ),
                             )
-                        )
-                        .padding(top = 24.dp, bottom = 8.dp, start = 8.dp, end = 8.dp),
+                        ),
                     contentAlignment = Alignment.BottomStart
                 ) {
                     Text(
@@ -113,10 +133,25 @@ fun GalleryImageItem(
                         fontSize = 14.sp,
                         textAlign = TextAlign.Start,
                         maxLines = 4,
-                        overflow = TextOverflow.Ellipsis
+                        overflow = TextOverflow.Ellipsis,
+                        modifier = Modifier.padding(8.dp)
                     )
+                }
                 }
             }
         }
     }
 }
+//@Preview(showBackground = true)
+//@Composable
+//fun GalleryImageItemPreview() {
+//    GalleryImageItem(
+//        image = ImageEntity(
+//            imageUri = "https://via.placeholder.com/300", // sample image URL
+//            title = "Sample Title",
+//            sourceApp = "com.example.app"
+//        ),
+//        onImageClick = {},
+//        isTwoColumnLayout = true
+//    )
+//}
