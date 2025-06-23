@@ -19,8 +19,12 @@ import androidx.work.ExistingWorkPolicy
 import androidx.work.OneTimeWorkRequestBuilder
 import androidx.work.WorkManager
 import androidx.work.workDataOf
+import com.viditnakhawa.myimageapp.LlmChatModelHelper
 import com.viditnakhawa.myimageapp.MLKitImgDescProcessor
+import com.viditnakhawa.myimageapp.MLKitImgDescProcessor.uriToBitmap
+import com.viditnakhawa.myimageapp.data.GEMMA_E2B_MODEL
 import com.viditnakhawa.myimageapp.processImageWithOCR
+import com.viditnakhawa.myimageapp.ui.modelmanager.ModelManagerViewModel
 import com.viditnakhawa.myimageapp.workers.MultimodalAnalysisWorker
 
 class ImageViewModel(
@@ -163,23 +167,20 @@ class ImageViewModel(
         }
     }
 
-    fun performOcr(uri: Uri, isGemmaInitialized: Boolean, onResult: (String?) -> Unit) {
+    fun performOcrOnImage(uri: Uri, isGemmaReady: Boolean, modelManagerViewModel: ModelManagerViewModel) {
         viewModelScope.launch(Dispatchers.IO) {
-            val rawText = processImageWithOCR(applicationContext, uri)
-            if (isGemmaInitialized) {
-                // Polishing logic will be handled by the ModelManagerViewModel
-                // For now, we'll assume it's there.
-                // In a further refactoring, we'd inject one ViewModel into the other.
-                // For now, we update the DB directly.
-                val currentDetails = getImageDetails(uri) ?: ImageEntity(uri.toString())
-                // val polishedText = modelManagerViewModel.polishTextWithGemma(rawText)
-                // For now, let's just save the raw text to a "polished" field to show it works.
-                val updatedDetails = currentDetails.copy(polishedOcr = "[Polished] $rawText")
-                updateImageDetails(updatedDetails)
-                onResult(null) // Signal that the result is in the database
+            val extractedText: String
+            if (isGemmaReady) {
+                // Primary Path: Use Gemma for direct, high-quality OCR
+                val bitmap = uriToBitmap(applicationContext, uri) ?: return@launch
+                extractedText = modelManagerViewModel.extractTextFromImageWithGemma(bitmap)
             } else {
-                onResult(rawText) // Send raw text back to UI for temporary display
+                // Fallback Path: Use ML Kit for reliable raw OCR
+                extractedText = processImageWithOCR(applicationContext, uri)
             }
+            val currentDetails = getImageDetails(uri) ?: ImageEntity(uri.toString())
+            val updatedDetails = currentDetails.copy(polishedOcr = extractedText)
+            updateImageDetails(updatedDetails)
         }
     }
 }
