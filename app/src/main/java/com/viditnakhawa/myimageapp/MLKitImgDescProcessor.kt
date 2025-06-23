@@ -3,10 +3,7 @@ package com.viditnakhawa.myimageapp
 import android.content.Context
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
-import android.graphics.ImageDecoder
 import android.net.Uri
-import android.os.Build
-import android.provider.MediaStore
 import android.util.Log
 import com.google.mlkit.genai.common.DownloadCallback
 import com.google.mlkit.genai.common.FeatureStatus
@@ -17,7 +14,6 @@ import kotlinx.coroutines.suspendCancellableCoroutine
 import java.io.IOException
 import kotlin.coroutines.resume
 import kotlin.coroutines.resumeWithException
-import kotlin.math.max
 
 data class PostDetails(
     val title: String = "Text Analysis",
@@ -54,11 +50,13 @@ object MLKitImgDescProcessor {
                 FeatureStatus.AVAILABLE -> {
                     Log.d("ImageDescriber", "Model already available.")
                 }
+
                 FeatureStatus.DOWNLOADABLE -> {
                     Log.d("ImageDescriber", "Downloading model...")
                     downloadModel(describer)
                     Log.d("ImageDescriber", "Model downloaded successfully.")
                 }
+
                 FeatureStatus.DOWNLOADING -> {
                     Log.d("ImageDescriber", "Model is downloading.")
                     return PostDetails(
@@ -66,9 +64,19 @@ object MLKitImgDescProcessor {
                         content = "Model is downloading. Please try again shortly."
                     )
                 }
+
+                FeatureStatus.UNAVAILABLE -> {
+                    val errorMsg =
+                        "The analysis model is not supported on this device. This may be due to outdated Google Play Services."
+                    Log.e("ImageDescriber", errorMsg)
+                    return PostDetails(title = "Analysis Failed", content = errorMsg)
+                }
+
                 else -> {
-                    Log.e("ImageDescriber", "Model unavailable: $status")
-                    return PostDetails(content = "Model unavailable: $status")
+                    val errorMsg =
+                        "Could not prepare the analysis model (Code: $status). Please check your internet connection and ensure Google Play Services is up-to-date."
+                    Log.e("ImageDescriber", errorMsg)
+                    return PostDetails(title = "Analysis Failed", content = errorMsg)
                 }
             }
 
@@ -90,8 +98,11 @@ object MLKitImgDescProcessor {
             )
 
         } catch (e: Exception) {
-            e.printStackTrace()
-            return PostDetails(content = "Error: ${e.message}")
+            Log.e("ImageDescriber", "Failed to describe image", e)
+            return PostDetails(
+                title = "Analysis Error",
+                content = "An unexpected error occurred during analysis: ${e.message}"
+            )
         }
     }
 

@@ -287,37 +287,71 @@ class ModelManagerViewModel(
     }
 
     @OptIn(ExperimentalCoroutinesApi::class)
-    suspend fun polishTextWithGemma(rawText: String): String =
+    suspend fun extractTextFromImageWithGemma(image: Bitmap): String =
         suspendCancellableCoroutine { continuation ->
-            Log.d(TAG, "Sending OCR text to Gemma for polishing.")
+            Log.d(TAG, "Sending image to Gemma for direct OCR.")
             val prompt = """
-                You are a text formatting expert. Clean up and polish the following raw OCR output. Correct spelling mistakes, add appropriate punctuation, and structure it into readable paragraphs with correct line breaks. Do not summarize, interpret, or change the meaning of the text. Return only the cleaned-up text.
-
-                RAW TEXT:
-                "$rawText"
-
-                POLISHED TEXT:
+                You are an Optical Character Recognition (OCR) engine. 
+                Extract all visible text from the provided image. 
+                Preserve the original formatting and line breaks as best as possible. 
+                Do not summarize, interpret, or add any text that is not visually present.
+                Respond ONLY with the extracted text.
             """.trimIndent()
+
+            var fullResponse = ""
 
             LlmChatModelHelper.runInference(
                 model = GEMMA_E2B_MODEL,
                 input = prompt,
-                images = emptyList(), // No image needed for this task
+                images = listOf(image),
                 resultListener = { partialResult, done ->
-                    // For a non-streaming task, the full result comes in one go.
+                    fullResponse += partialResult
                     if (done) {
                         if (continuation.isActive) {
-                            continuation.resume(partialResult)
+                            continuation.resume(fullResponse.trim())
                         }
                     }
                 },
                 cleanUpListener = {
                     if (continuation.isActive) {
-                        continuation.resume("Error: Polishing was interrupted.")
+                        continuation.resume("Error: OCR was interrupted.")
                     }
                 }
             )
         }
+
+//    @OptIn(ExperimentalCoroutinesApi::class)
+//    suspend fun polishTextWithGemma(rawText: String): String =
+//        suspendCancellableCoroutine { continuation ->
+//            Log.d(TAG, "Sending OCR text to Gemma for polishing.")
+//            val prompt = """
+//                You are a text formatting expert. Clean up and polish the following raw OCR output. Correct spelling mistakes, add appropriate punctuation, and structure it into readable paragraphs with correct line breaks. Do not summarize, interpret, or change the meaning of the text. Return only the cleaned-up text.
+//
+//                RAW TEXT:
+//                "$rawText"
+//
+//                POLISHED TEXT:
+//            """.trimIndent()
+//
+//            LlmChatModelHelper.runInference(
+//                model = GEMMA_E2B_MODEL,
+//                input = prompt,
+//                images = emptyList(), // No image needed for this task
+//                resultListener = { partialResult, done ->
+//                    // For a non-streaming task, the full result comes in one go.
+//                    if (done) {
+//                        if (continuation.isActive) {
+//                            continuation.resume(partialResult)
+//                        }
+//                    }
+//                },
+//                cleanUpListener = {
+//                    if (continuation.isActive) {
+//                        continuation.resume("Error: Polishing was interrupted.")
+//                    }
+//                }
+//            )
+//        }
 
     fun isGemmaInitialized(): Boolean {
         val model = GEMMA_E2B_MODEL // Your model definition

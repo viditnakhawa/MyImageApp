@@ -71,7 +71,7 @@ class MultimodalAnalysisWorker(
         1.  **Analyze Image:** Examine the visual elements and any text in the screenshot.
         2.  **Determine Source App:** Identify the application where the screenshot was taken (e.g., "Twitter", "Gmail", "Instagram", "Unknown").
         3.  **Create Title:** Write a very short, descriptive title (max 10 words).
-        4.  **Create Summary:** Write a brief, one or two-sentence summary of the main content.
+        4.  **Create Summary:** Write a brief, three or four-sentence summary of the main content.
         5.  **Extract Tags:** List 3 to 5 relevant keywords as an array of strings.
         
         JSON_SCHEMA:
