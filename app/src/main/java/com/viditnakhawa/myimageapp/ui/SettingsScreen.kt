@@ -1,5 +1,6 @@
 package com.viditnakhawa.myimageapp.ui
 
+import android.content.Intent
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
@@ -13,8 +14,10 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
+import com.google.android.gms.oss.licenses.OssLicensesMenuActivity
 import com.viditnakhawa.myimageapp.ui.navigation.AppRoutes
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -22,6 +25,7 @@ import com.viditnakhawa.myimageapp.ui.navigation.AppRoutes
 fun SettingsScreen(
     navController: NavController
 ) {
+    val context = LocalContext.current
     Scaffold(
         topBar = {
             TopAppBar(
@@ -52,7 +56,10 @@ fun SettingsScreen(
                     icon = Icons.AutoMirrored.Filled.Subject,
                     title = "Open Source Licenses",
                     subtitle = "View licenses for open source software used in SnapSuite.",
-                    onClick = { navController.navigate(AppRoutes.LICENSES) }
+                    onClick = {
+                        OssLicensesMenuActivity.setActivityTitle("Open Source Licenses")
+                        context.startActivity(Intent(context, OssLicensesMenuActivity::class.java))
+                    }
                 )
             }
             item {

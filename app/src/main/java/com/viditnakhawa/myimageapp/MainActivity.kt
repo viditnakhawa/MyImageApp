@@ -12,6 +12,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.activity.enableEdgeToEdge
 import androidx.core.content.ContextCompat
 import com.viditnakhawa.myimageapp.data.GEMMA_E2B_MODEL
 import com.viditnakhawa.myimageapp.ui.PermissionsScreen
@@ -27,6 +28,7 @@ class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         MLKitImgDescProcessor.initialize(applicationContext)
+        enableEdgeToEdge()
 
         setContent {
             MyImageAppTheme {
