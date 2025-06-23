@@ -11,7 +11,7 @@ It automatically organizes your screenshots, enriches them with **AI-generated t
 - 🔍 **Automatic Screenshot Discovery**  
   Scans your device's screenshot folder and imports screenshots automatically.
 
-- 🧠 **AI-Powered Image Analysis** (via [Gemma](https://ai.google.dev/edge/models/gemma)):
+- 🧠 **AI-Powered Image Analysis** (via [Gemma](https://developers.googleblog.com/en/introducing-gemma-3n/)):
   - 📌 Descriptive title
   - 📝 Concise summary
   - 🏷️ Relevant tags
