@@ -1,5 +1,6 @@
-package com.viditnakhawa.myimageapp.ui
+package com.viditnakhawa.myimageapp.ui.analysis
 
+import android.annotation.SuppressLint
 import android.net.Uri
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.tween
@@ -27,6 +28,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import coil.compose.AsyncImage
@@ -43,6 +45,7 @@ private val TagBackground = Color(0xFF4D1717)
 private val TagText = Color(0xFFF2F2F2)
 
 
+@SuppressLint("AutoboxingStateCreation")
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
 @Composable
 fun AnalysisScreen(
@@ -63,7 +66,7 @@ fun AnalysisScreen(
 ) {
     var noteText by remember { mutableStateOf("") }
     var isNoteEditable by remember { mutableStateOf(false) }
-    var aspectRatio by remember { mutableStateOf(9f / 16f) }
+    var aspectRatio by remember { mutableFloatStateOf(9f / 16f) }
     val context = LocalContext.current
 
     // **THE FIX: More robust state and side-effect handling for color extraction.**
@@ -97,12 +100,20 @@ fun AnalysisScreen(
                         )
                         if (isGemmaReady) {
                             Spacer(modifier = Modifier.width(8.dp))
-                            Icon(
-                                painter = painterResource(id = R.drawable.gemma_color),
-                                contentDescription = "Gemma Initialized",
-                                modifier = Modifier.size(24.dp),
-                                tint = Color.Unspecified // Use original drawable colors
-                            )
+                            Box(
+                                modifier = Modifier
+                                    .size(24.dp) // Adjust size as needed
+                                    .clip(CircleShape)
+                                    .background(Color.Black), // Optional background
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Icon(
+                                    painter = painterResource(id = R.drawable.gemma_color),
+                                    contentDescription = "Gemma Initialized",
+                                    modifier = Modifier.size(20.dp),
+                                    tint = Color.Unspecified
+                                )
+                            }
                         }
                     }
                 },
@@ -112,25 +123,61 @@ fun AnalysisScreen(
                     }
                 },
                 actions = {
-                    CircularActionButton(
-                        icon = Icons.Default.Add,
-                        contentDescription = "Add to Collection",
-                        onClick = onAddToCollection
-                    )
+                    Row(
+                        modifier = Modifier.padding(end = 14.dp),
+                        horizontalArrangement = Arrangement.spacedBy(30.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        IconButton(
+                            onClick = onAddToCollection,
+                            modifier = Modifier
+                                .size(24.dp)
+                                .background(
+                                    color = MaterialTheme.colorScheme.primary.copy(alpha = 0.15f),
+                                    shape = CircleShape
+                                )
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.Add,
+                                contentDescription = "Add to Collection",
+                                tint = MaterialTheme.colorScheme.primary
+                            )
+                        }
 
-                    CircularActionButton(
-                        icon = Icons.Default.Share,
-                        contentDescription = "Share",
-                        onClick = { onShare(imageUri) }
-                    )
+                        IconButton(
+                            onClick = { onShare(imageUri) },
+                            modifier = Modifier
+                                .size(24.dp)
+                                .background(
+                                    color = MaterialTheme.colorScheme.secondary.copy(alpha = 0.15f),
+                                    shape = CircleShape
+                                )
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.Share,
+                                contentDescription = "Share",
+                                tint = MaterialTheme.colorScheme.secondary
+                            )
+                        }
 
-                    CircularActionButton(
-                        icon = Icons.Default.DeleteForever,
-                        contentDescription = "Delete",
-                        onClick = { onDelete(imageUri) }
-                    )
+                        IconButton(
+                            onClick = { onDelete(imageUri) },
+                            modifier = Modifier
+                                .size(24.dp)
+                                .background(
+                                    color = MaterialTheme.colorScheme.error.copy(alpha = 0.15f),
+                                    shape = CircleShape
+                                )
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.DeleteForever,
+                                contentDescription = "Delete",
+                                tint = MaterialTheme.colorScheme.error
+                            )
+                        }
+                    }
                 },
-                // Make TopAppBar transparent to see the animated background
+                //TopAppBar transparent to see the animated background
                 colors = TopAppBarDefaults.topAppBarColors(
                     containerColor = Color.Transparent,
                     titleContentColor = MaterialTheme.colorScheme.onSurface,
@@ -301,8 +348,8 @@ fun AnalysisScreen(
                             .padding(horizontal = 16.dp),
                         shape = RoundedCornerShape(24.dp),
                         colors = CardDefaults.cardColors(
-                            containerColor = Color.White,
-                            contentColor = Color.Black
+                            containerColor = MaterialTheme.colorScheme.background,
+                            contentColor = MaterialTheme.colorScheme.onBackground
                         )
                     ) {
                         Column(modifier = Modifier.padding(20.dp)) {
@@ -393,8 +440,19 @@ fun AnalysisScreen(
                         }
                     }
                 }
-
-                Spacer(modifier = Modifier.height(24.dp))
+                Spacer(modifier = Modifier.height(6.dp))
+                Text(
+                    text = "This response is AI-generated and should not be used for professional, medical, or legal purposes.",
+                    style = MaterialTheme.typography.labelSmall.copy(
+                        fontSize = 10.sp,
+                        color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.6f),
+                        textAlign = TextAlign.Center
+                    ),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 24.dp),
+                    textAlign = TextAlign.Center
+                )
             }
         }
     }
@@ -504,3 +562,34 @@ private fun TooltipFab(
         }
     }
 }
+
+//@Preview(showBackground = true)
+//@Composable
+//fun AnalysisScreenPreview() {
+//    val mockUri = Uri.parse("https://via.placeholder.com/300")
+//
+//    val mockDetails = PostDetails(
+//        sourceApp = "com.example.app",
+//        title = "Mock Title",
+//        content = "This is some mock content that represents the image analysis summary.",
+//        tags = listOf("Tag1", "Tag2", "Sample"),
+//        isFallback = true,
+//        polishedOcr = "This is a polished OCR output.",
+//    )
+//
+//    AnalysisScreen(
+//        imageUri = mockUri,
+//        details = mockDetails,
+//        isLoading = false,
+//        isOcrRunning = false,
+//        isGemmaReady = true,
+//        rawOcrText = "Detected text by ML Kit",
+//        onClose = {},
+//        onImageClick = {},
+//        onAddToCollection = {},
+//        onShare = {},
+//        onDelete = {},
+//        onRecognizeText = {},
+//        onAnalyzeWithGemma = {}
+//    )
+//}

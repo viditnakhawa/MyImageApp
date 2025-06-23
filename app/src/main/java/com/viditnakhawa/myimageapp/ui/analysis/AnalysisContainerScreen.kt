@@ -6,7 +6,6 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.platform.LocalContext
 import androidx.navigation.NavController
 import com.viditnakhawa.myimageapp.PostDetails
-import com.viditnakhawa.myimageapp.ui.AnalysisScreen
 import com.viditnakhawa.myimageapp.ui.ImageViewModel
 import com.viditnakhawa.myimageapp.ui.modelmanager.ModelManagerViewModel
 import com.viditnakhawa.myimageapp.ui.navigation.AppRoutes
@@ -29,14 +28,19 @@ fun AnalysisContainerScreen(
         imageViewModel.getImageDetailsFlow(imageUri).collect { entity ->
             value = entity?.let {
                 PostDetails(
-                    title = it.title ?: "Analyzing...",
+                    title = when {
+                        it.title.isNullOrBlank() && it.content?.startsWith("Model unavailable") == true -> "Analysis Failed"
+                        it.title.isNullOrBlank() && it.content?.startsWith("Could not prepare") == true -> "Analysis Failed"
+                        it.title.isNullOrBlank() -> "Analysis in progress..."
+                        else -> it.title!!
+                    },
                     content = it.content ?: "",
                     sourceApp = it.sourceApp,
                     tags = it.tags,
                     isFallback = (it.title != null && it.sourceApp == null),
                     polishedOcr = it.polishedOcr
                 )
-            }
+            }?: PostDetails(title = "Loading image...", content = "")
             isLoading = false
         }
     }
@@ -69,15 +73,14 @@ fun AnalysisContainerScreen(
             navController.popBackStack()
         },
         onRecognizeText = { uri ->
-            val isGemmaReady = modelManagerViewModel.isGemmaInitialized()
-            analysisMessage = if (isGemmaReady) "Polishing text with Gemma..." else "Extracting text with ML Kit..."
-            isLoading = true
-            imageViewModel.performOcr(uri, isGemmaReady) { rawText ->
-                if (rawText != null) {
-                    rawOcrResult = rawText
-                }
-                isLoading = false
+            analysisMessage = if (isGemmaReady) {
+                "Gemma is reading the image..."
+            } else {
+                "Extracting text with ML Kit..."
             }
+            isLoading = true
+            // Trigger the ViewModel function, which now contains the fallback logic
+            imageViewModel.performOcrOnImage(uri, isGemmaReady, modelManagerViewModel)
         },
         onAnalyzeWithGemma = { uri ->
             analysisMessage = "Analyzing with Gemma..."
