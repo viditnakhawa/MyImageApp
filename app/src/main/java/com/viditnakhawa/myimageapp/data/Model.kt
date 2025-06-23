@@ -80,7 +80,12 @@ data class Model(
 
     // Helper functions to get typed configuration values
     fun getIntConfigValue(key: ConfigKey, defaultValue: Int): Int {
-        return (this.configValues[key.label] as? Number)?.toInt() ?: defaultValue
+        val configValue = this.configValues[key.label]
+        return when (configValue) {
+            is Number -> configValue.toInt()
+            is String -> configValue.toIntOrNull() ?: defaultValue
+            else -> defaultValue
+        }
     }
 
     fun getFloatConfigValue(key: ConfigKey, defaultValue: Float): Float {

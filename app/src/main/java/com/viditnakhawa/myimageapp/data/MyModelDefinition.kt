@@ -21,11 +21,11 @@ val GEMMA_E2B_MODEL = Model(
         defaultTopK = 64,
         defaultTopP = 0.95f,
         defaultTemperature = 1.0f,
-        defaultMaxToken = 4096,
+        defaultMaxToken = 8192,
         accelerators = listOf(Accelerator.CPU, Accelerator.GPU)
     ),
-    showBenchmarkButton = false, // Simplified for your use case
-    showRunAgainButton = false   // Simplified for your use case
+    showBenchmarkButton = false,
+    showRunAgainButton = false
 ).apply {
     // This helper call initializes internal values like totalBytes
     preProcess()
