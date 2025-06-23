@@ -5,4 +5,5 @@ plugins {
     alias(libs.plugins.kotlin.compose) apply false
     id("com.google.devtools.ksp") version "2.0.21-1.0.27" apply false
     id("androidx.room") version "2.7.1" apply false
+    id("com.google.android.gms.oss-licenses-plugin") version "0.10.6" apply false
 }

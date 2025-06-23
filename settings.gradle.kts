@@ -3,9 +3,15 @@ include(":app")
 
 pluginManagement {
     repositories {
-        google() // Don't restrict content here — plugin resolution needs full access
-        mavenCentral()
+        google()
         gradlePluginPortal()
+    }
+    resolutionStrategy {
+        eachPlugin {
+            if (requested.id.id == "com.google.android.gms.oss-licenses-plugin") {
+                useModule("com.google.android.gms:oss-licenses-plugin:0.10.6")
+            }
+        }
     }
 }
 
