@@ -6,7 +6,21 @@ import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.foundation.layout.FlowRow
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.aspectRatio
+import androidx.compose.foundation.layout.defaultMinSize
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -15,9 +29,35 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.TextSnippet
-import androidx.compose.material.icons.filled.*
-import androidx.compose.material3.*
-import androidx.compose.runtime.*
+import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.Apps
+import androidx.compose.material.icons.filled.AutoAwesome
+import androidx.compose.material.icons.filled.Check
+import androidx.compose.material.icons.filled.DeleteForever
+import androidx.compose.material.icons.filled.Share
+import androidx.compose.material.icons.filled.WorkspacePremium
+import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.FilledIconButton
+import androidx.compose.material3.FloatingActionButton
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.IconButtonDefaults
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Text
+import androidx.compose.material3.TopAppBar
+import androidx.compose.material3.TopAppBarDefaults
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableFloatStateOf
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -28,7 +68,6 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
-import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import coil.compose.AsyncImage
@@ -40,10 +79,9 @@ import com.viditnakhawa.myimageapp.ui.theme.extractDominantColor
 import kotlinx.coroutines.launch
 
 
-private val UpgradeCardColor = Color(0xFF174D38)
-private val TagBackground = Color(0xFF4D1717)
+private val UpgradeCardColor = Color(0xFFdffecc)
+private val TagBackground = Color(0xFFae040d)
 private val TagText = Color(0xFFF2F2F2)
-
 
 @SuppressLint("AutoboxingStateCreation")
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
@@ -69,7 +107,6 @@ fun AnalysisScreen(
     var aspectRatio by remember { mutableFloatStateOf(9f / 16f) }
     val context = LocalContext.current
 
-    // **THE FIX: More robust state and side-effect handling for color extraction.**
     val initialColor = MaterialTheme.colorScheme.background
     var dominantColor by remember { mutableStateOf(initialColor) }
     val animatedBackgroundColor by animateColorAsState(
@@ -78,16 +115,14 @@ fun AnalysisScreen(
         label = "BackgroundFade"
     )
 
-    // This LaunchedEffect will re-run ONLY when imageUri changes.
     LaunchedEffect(imageUri) {
-        launch { // Launch a new coroutine for the suspend function
+        launch {
             val rawColor = extractDominantColor(context, imageUri)
             dominantColor = adjustColorBrightness(rawColor, 0.85f) // Darken for better text contrast
         }
     }
 
 
-    // Using theme colors directly in the Scaffold.
     Scaffold(
         containerColor = animatedBackgroundColor,
         topBar = {
@@ -104,7 +139,7 @@ fun AnalysisScreen(
                                 modifier = Modifier
                                     .size(24.dp) // Adjust size as needed
                                     .clip(CircleShape)
-                                    .background(Color.Black), // Optional background
+                                    .background(Color.Black),
                                 contentAlignment = Alignment.Center
                             ) {
                                 Icon(
@@ -177,7 +212,7 @@ fun AnalysisScreen(
                         }
                     }
                 },
-                //TopAppBar transparent to see the animated background
+
                 colors = TopAppBarDefaults.topAppBarColors(
                     containerColor = Color.Transparent,
                     titleContentColor = MaterialTheme.colorScheme.onSurface,
@@ -222,7 +257,6 @@ fun AnalysisScreen(
                     }
                 }
             }  else if (details != null) {
-                // Build the image request with a listener to check dimensions
                 val imageRequest = ImageRequest.Builder(LocalContext.current)
                     .data(imageUri)
                     .crossfade(true)
@@ -417,17 +451,18 @@ fun AnalysisScreen(
                                     modifier = Modifier.weight(1f)
                                 )
                                 Spacer(modifier = Modifier.width(8.dp))
-                                IconButton(
+                                FilledIconButton(
                                     onClick = { isNoteEditable = false },
-                                    modifier = Modifier
-                                        .size(40.dp)
-                                        .clip(CircleShape)
-                                        .background(MaterialTheme.colorScheme.primary)
+                                    modifier = Modifier.size(40.dp),
+                                    shape = RoundedCornerShape(18.dp),
+                                    colors = IconButtonDefaults.filledIconButtonColors(
+                                        containerColor = MaterialTheme.colorScheme.primary,
+                                        contentColor = MaterialTheme.colorScheme.onPrimary
+                                    )
                                 ) {
                                     Icon(
                                         imageVector = Icons.Default.Check,
-                                        contentDescription = "Save Note",
-                                        tint = MaterialTheme.colorScheme.onPrimary
+                                        contentDescription = "Save Note"
                                     )
                                 }
                             }
@@ -483,37 +518,7 @@ private fun UpgradeCard() {
     }
 }
 
-@Composable
-fun CircularActionButton(
-    icon: ImageVector,
-    contentDescription: String,
-    onClick: () -> Unit,
-    backgroundColor: Color = MaterialTheme.colorScheme.primary,
-    iconTint: Color = MaterialTheme.colorScheme.onPrimary
-) {
-    IconButton(
-        onClick = onClick,
-        modifier = Modifier
-            .padding(horizontal = 4.dp)
-            .size(40.dp) // full tap area
-    ) {
-        // Visual circle smaller than button size
-        Box(
-            modifier = Modifier
-                .size(28.dp) // <- visual circle size
-                .clip(CircleShape)
-                .background(backgroundColor),
-            contentAlignment = Alignment.Center
-        ) {
-            Icon(
-                imageVector = icon,
-                contentDescription = contentDescription,
-                tint = iconTint,
-                modifier = Modifier.size(16.dp) // smaller icon inside
-            )
-        }
-    }
-}
+
 
 @Composable
 fun CompactChip(tag: String) {
@@ -548,7 +553,7 @@ private fun TooltipFab(
         Card(
             shape = RoundedCornerShape(8.dp),
             colors = CardDefaults.cardColors(
-                containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.9f)
+                containerColor = Color.Transparent.copy(alpha = 0.5f)
             )
         ) {
             Text(text = label, modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp))
@@ -556,9 +561,9 @@ private fun TooltipFab(
         FloatingActionButton(
             onClick = onClick,
             shape = CircleShape,
-            containerColor = TagBackground
+            containerColor = Color.Transparent.copy(alpha = 0.5f),
         ) {
-            Icon(icon, contentDescription = label, tint = Color.White)
+            Icon(icon, contentDescription = label, tint = MaterialTheme.colorScheme.primary)
         }
     }
 }

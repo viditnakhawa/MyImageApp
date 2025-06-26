@@ -25,8 +25,10 @@ fun GalleryScreen(
     onNavigateToSettings: () -> Unit,
     onNavigateToCamera: () -> Unit,
 ) {
-    val imageEntities by imageViewModel.allImages.collectAsStateWithLifecycle(initialValue = emptyList())
+    //val imageEntities by imageViewModel.allImages.collectAsStateWithLifecycle(initialValue = emptyList())
+    val imageEntities by imageViewModel.searchedImages.collectAsStateWithLifecycle()
     //val imageList by imageViewModel.images.collectAsStateWithLifecycle()
+    val searchQuery by imageViewModel.searchQuery.collectAsStateWithLifecycle()
     val context = LocalContext.current
 
     val pickMediaLauncher = rememberLauncherForActivityResult(
@@ -47,6 +49,8 @@ fun GalleryScreen(
 
     ScreenshotsGalleryScreenWithFAB(
         images = imageEntities,
+        searchQuery = searchQuery,
+        onSearchQueryChanged = { imageViewModel.onSearchQueryChanged(it) },
         onViewCollectionsClick = onNavigateToCollections,
         onCreateCollectionClick = onCreateCollection,
         onImageClick = { imageEntity ->

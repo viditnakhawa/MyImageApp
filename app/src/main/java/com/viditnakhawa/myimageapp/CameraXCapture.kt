@@ -7,23 +7,49 @@ import android.os.Build
 import android.provider.MediaStore
 import android.util.Log
 import android.widget.Toast
+import androidx.camera.core.AspectRatio
 import androidx.camera.core.CameraSelector
 import androidx.camera.core.ImageCapture
 import androidx.camera.core.ImageCaptureException
 import androidx.camera.core.Preview
-import androidx.camera.core.AspectRatio
 import androidx.camera.lifecycle.ProcessCameraProvider
 import androidx.camera.view.PreviewView
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
-import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.aspectRatio
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.FlipCameraAndroid
-import androidx.compose.material3.*
-import androidx.compose.runtime.*
+import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableFloatStateOf
+import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -41,7 +67,7 @@ import com.google.accompanist.permissions.isGranted
 import com.google.accompanist.permissions.rememberPermissionState
 import java.io.File
 import java.text.SimpleDateFormat
-import java.util.*
+import java.util.Locale
 
 @OptIn(ExperimentalPermissionsApi::class)
 @Composable
@@ -145,34 +171,48 @@ fun ComposeCameraScreen(
                         Spacer(modifier = Modifier.size(64.dp))
 
                         // Shutter Button
-                        IconButton(
-                            modifier = Modifier
-                                .size(80.dp)
-                                .border(4.dp, Color.White, CircleShape),
-                            onClick = {
-                                if (!isImageCaptured) {
+                        if (!isImageCaptured) {
+                            // Shutter Button (Before capture)
+                            IconButton(
+                                modifier = Modifier
+                                    .size(80.dp)
+                                    .border(4.dp, Color.White, CircleShape),
+                                onClick = {
                                     captureImage(context, imageCapture) { tempUri ->
                                         tempUri?.let {
                                             capturedUri = it
                                             isImageCaptured = true
                                         }
                                     }
-                                } else {
-                                    // Save to gallery and call onImageCaptured
+                                }
+                            ) {
+                                Box(
+                                    modifier = Modifier
+                                        .fillMaxSize()
+                                        .background(Color.White.copy(alpha = 0.5f), CircleShape)
+                                )
+                            }
+                        } else {
+                            // Tick Button (After capture)
+                            IconButton(
+                                modifier = Modifier
+                                    .size(80.dp)
+                                    .background(Color.White, CircleShape),
+                                onClick = {
                                     capturedUri?.let { uri ->
                                         saveImageToGallery(context, uri) { finalUri ->
                                             onImageCaptured(finalUri)
                                         }
                                     }
                                 }
-
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.Check,
+                                    contentDescription = "Confirm",
+                                    tint = Color.Black,
+                                    modifier = Modifier.size(40.dp)
+                                )
                             }
-                        ) {
-                            Box(
-                                modifier = Modifier
-                                    .fillMaxSize()
-                                    .background(Color.White.copy(alpha = 0.5f), CircleShape)
-                            )
                         }
 
                         // Flip Camera Button

@@ -3,7 +3,6 @@ package com.viditnakhawa.myimageapp.ui.gallery
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.aspectRatio
@@ -12,22 +11,26 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Card
-import androidx.compose.material3.Text
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.ui.graphics.painter.ColorPainter
-import androidx.compose.runtime.*
+import androidx.compose.material3.Text
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.painter.ColorPainter
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
-import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.core.net.toUri
@@ -57,7 +60,6 @@ fun GalleryImageItem(
         .aspectRatio(1f)
 
     if (isTwoColumnLayout) {
-        // --- For the 2-column grid, use the new Card with the interaction modifier ---
         GalleryImageCard(
             image = image,
             modifier = interactionModifier
@@ -77,7 +79,7 @@ fun GalleryImageItem(
             .aspectRatio(1f) // Makes the items square
             .pointerInput(image.imageUri) {
                 detectTapGestures(
-                    onLongPress = {
+                    onDoubleTap = {
                         if (image.sourceApp != null) {
                             scope.launch {
                                 showTitleOverlay = true
@@ -115,16 +117,16 @@ fun GalleryImageItem(
                 Box(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .alpha(titleAlpha) // Apply the animated alpha here
+                        .align(Alignment.BottomStart)
                         .background(
                             Brush.verticalGradient(
                                 colors = listOf(
                                     Color.Transparent,
                                     Color.Black.copy(alpha = 0.8f)
-                                ),
+                                )
                             )
-                        ),
-                    contentAlignment = Alignment.BottomStart
+                        )
+                        .alpha(titleAlpha)
                 ) {
                     Text(
                         text = image.title.orEmpty(),
@@ -142,6 +144,7 @@ fun GalleryImageItem(
         }
     }
 }
+
 //@Preview(showBackground = true)
 //@Composable
 //fun GalleryImageItemPreview() {

@@ -1,16 +1,23 @@
 package com.viditnakhawa.myimageapp.ui
 
-import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.tween
-import androidx.compose.animation.fadeIn
-import androidx.compose.animation.fadeOut
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.offset
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.GridItemSpan
-import androidx.compose.material.icons.filled.GridView
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.lazy.grid.rememberLazyGridState
@@ -20,10 +27,30 @@ import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.CalendarViewMonth
 import androidx.compose.material.icons.filled.Camera
 import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.GridView
 import androidx.compose.material.icons.filled.PhotoLibrary
 import androidx.compose.material.icons.filled.Settings
-import androidx.compose.material3.*
-import androidx.compose.runtime.*
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.FloatingActionButton
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.Scaffold
+import androidx.compose.material3.SmallFloatingActionButton
+import androidx.compose.material3.Text
+import androidx.compose.material3.TextFieldDefaults
+import androidx.compose.material3.TopAppBar
+import androidx.compose.material3.TopAppBarDefaults
+import androidx.compose.material3.rememberTopAppBarState
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.derivedStateOf
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
@@ -35,17 +62,17 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
-import com.viditnakhawa.myimageapp.ui.gallery.GalleryImageItem
 import com.viditnakhawa.myimageapp.data.ImageEntity
-import kotlinx.coroutines.delay
+import com.viditnakhawa.myimageapp.ui.gallery.GalleryImageItem
 import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ScreenshotsGalleryScreenWithFAB(
     images: List<ImageEntity>,
+    searchQuery: String,
+    onSearchQueryChanged: (String) -> Unit,
     onViewCollectionsClick: () -> Unit,
     onCreateCollectionClick: () -> Unit,
     onCapturePhotoClick: () -> Unit,
@@ -58,6 +85,12 @@ fun ScreenshotsGalleryScreenWithFAB(
     val isAtLeastApi31 = true
     val gridState = rememberLazyGridState()
     val scrollBehavior = TopAppBarDefaults.enterAlwaysScrollBehavior(rememberTopAppBarState())
+
+    val blurRadius by remember {
+        derivedStateOf {
+            (scrollBehavior.state.collapsedFraction * 12).dp
+        }
+    }
 
     Box(modifier = Modifier.fillMaxSize()) {
         if (fabMenuExpanded) {
@@ -73,6 +106,7 @@ fun ScreenshotsGalleryScreenWithFAB(
 
         Scaffold(
             modifier = Modifier.nestedScroll(scrollBehavior.nestedScrollConnection),
+            containerColor = MaterialTheme.colorScheme.background,
             topBar = {
                 TopAppBar(
                     title = {
@@ -94,141 +128,193 @@ fun ScreenshotsGalleryScreenWithFAB(
                             )
                         }
                     },
-                    scrollBehavior = scrollBehavior
+                    scrollBehavior = scrollBehavior,
+                    colors = TopAppBarDefaults.topAppBarColors(
+                        containerColor = Color.Transparent,
+                        scrolledContainerColor = MaterialTheme.colorScheme.surface.copy(alpha = 0.85f)
+                    ),
+                    modifier = Modifier.blur(radius = blurRadius)
                 )
             },
-            floatingActionButton = {
-                Column(
-                    modifier = Modifier.padding(12.dp),
-                    horizontalAlignment = Alignment.End,
-                    verticalArrangement = Arrangement.spacedBy(16.dp)
+        ) { innerPadding ->
+            Box(modifier = Modifier.fillMaxSize().padding(innerPadding)) {
+                LazyVerticalGrid(
+                    columns = if (isTwoColumnGrid) GridCells.Fixed(2) else GridCells.Adaptive(minSize = 128.dp),
+                    state = gridState,
+                    modifier = Modifier.fillMaxSize(),
+                    contentPadding = PaddingValues(
+                        start = 8.dp,
+                        end = 8.dp,
+                        top = 8.dp,
+                        bottom = 96.dp // Increased padding for the bottom bar
+                    ),
+                    verticalArrangement = Arrangement.spacedBy(8.dp),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
-                    // Use AnimatedFabMenu instead of AnimatedVisibility
-                    AnimatedFabMenu(
-                        expanded = fabMenuExpanded,
-                        onCapturePhotoClick = {
-                            fabMenuExpanded = false
-                            onCapturePhotoClick()
-                        },
-                        onPickFromGalleryClick = {
-                            fabMenuExpanded = false
-                            onPickFromGalleryClick()
+                    item(span = { GridItemSpan(maxLineSpan) }) {
+                        Row(
+                            modifier = Modifier
+                                .padding(horizontal = 8.dp, vertical = 12.dp)
+                                .fillMaxWidth(),
+                            horizontalArrangement = Arrangement.spacedBy(12.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Box(
+                                modifier = Modifier
+                                    .weight(1f)
+                                    .clip(RoundedCornerShape(28.dp))
+                                    .clickable { onViewCollectionsClick() }
+                                    .background(
+                                        brush = Brush.verticalGradient(
+                                            listOf(
+                                                MaterialTheme.colorScheme.surfaceVariant,
+                                                MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.9f)
+                                            )
+                                        )
+                                    )
+                                    .padding(16.dp)
+                            ) {
+                                Text(
+                                    text = "My Collections",
+                                    style = MaterialTheme.typography.bodyMedium,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                            }
+                            IconButton(
+                                onClick = onCreateCollectionClick,
+                                modifier = Modifier
+                                    .size(48.dp)
+                                    .clip(RoundedCornerShape(16.dp))
+                                    .background(MaterialTheme.colorScheme.surfaceVariant)
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.Add,
+                                    contentDescription = "Create Collection",
+                                    tint = MaterialTheme.colorScheme.primary
+                                )
+                            }
                         }
-                    )
+                    }
+                    item(span = { GridItemSpan(maxLineSpan) }) {
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(horizontal = 8.dp)
+                                .padding(top = 12.dp, bottom = 8.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.SpaceBetween
+                        ) {
+                            Text(
+                                text = "Screenshots",
+                                style = MaterialTheme.typography.titleMedium.copy(
+                                    fontWeight = FontWeight.SemiBold,
+                                    color = MaterialTheme.colorScheme.onBackground
+                                )
+                            )
+                            IconButton(onClick = { isTwoColumnGrid = !isTwoColumnGrid }) {
+                                Icon(
+                                    imageVector = if (isTwoColumnGrid) Icons.Default.GridView else Icons.Default.CalendarViewMonth,
+                                    contentDescription = "Toggle Grid Layout",
+                                    modifier = Modifier.size(18.dp),
+                                    tint = MaterialTheme.colorScheme.onBackground
+                                )
+                            }
+                        }
+                    }
 
-                    FloatingActionButton(
-                        onClick = { fabMenuExpanded = !fabMenuExpanded },
-                        containerColor = MaterialTheme.colorScheme.primary,
-                        modifier = Modifier.size(54.dp),
-                        shape = RoundedCornerShape(24.dp)
-                    ) {
-                        Icon(
-                            imageVector = if (!fabMenuExpanded) Icons.Default.Add else Icons.Default.Close,
-                            contentDescription = "Add",
-                            modifier = Modifier.size(38.dp),
-                            tint = MaterialTheme.colorScheme.onPrimary
+                    items(items = images, key = { it.imageUri }) { imageEntity ->
+                        GalleryImageItem(
+                            image = imageEntity,
+                            onImageClick = onImageClick,
+                            isTwoColumnLayout = isTwoColumnGrid
                         )
                     }
                 }
-            }
-        ) { innerPadding ->
-            LazyVerticalGrid(
-                columns = if (isTwoColumnGrid) GridCells.Fixed(2) else GridCells.Adaptive(minSize = 128.dp),
-                state = gridState,
-                modifier = Modifier
-                    .padding(innerPadding)
-                    .fillMaxSize(),
-                contentPadding = PaddingValues(
-                    start = 8.dp,
-                    end = 8.dp,
-                    top = 8.dp,
-                    bottom = 80.dp // Padding for the FAB
-                ),
-                verticalArrangement = Arrangement.spacedBy(8.dp),
-                horizontalArrangement = Arrangement.spacedBy(8.dp)
-            ) {
-                item(span = { GridItemSpan(maxLineSpan) }) {
-                    Row(
+
+                // This Row contains the search bar and the FAB, aligned to the bottom
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .align(Alignment.BottomCenter)
+                        .padding(16.dp)
+                ) {
+                    // This Box creates the frosted glass search bar
+                    Box(
                         modifier = Modifier
-                            .padding(horizontal = 8.dp, vertical = 12.dp)
-                            .fillMaxWidth(),
-                        horizontalArrangement = Arrangement.spacedBy(12.dp),
-                        verticalAlignment = Alignment.CenterVertically
+                            .align(Alignment.BottomStart)
+                            .fillMaxWidth(0.82f) // fix width, no weight
+                            .height(54.dp)
+                            .border(
+                                width = 1.dp,
+                                color = Color.White.copy(alpha = 0.4f),
+                                shape = RoundedCornerShape(24.dp)
+                            )
                     ) {
                         Box(
                             modifier = Modifier
-                                .weight(1f)
-                                .clip(RoundedCornerShape(28.dp))
-                                .clickable { onViewCollectionsClick() }
-                                .background(
-                                    brush = Brush.verticalGradient(
-                                        listOf(
-                                            MaterialTheme.colorScheme.surfaceVariant,
-                                            MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.9f)
-                                        )
-                                    )
-                                )
-                                .padding(16.dp)
-                        ) {
-                            Text(
-                                text = "My Collections",
-                                style = MaterialTheme.typography.bodyMedium,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant
-                            )
-                        }
-                        IconButton(
-                            onClick = onCreateCollectionClick,
-                            modifier = Modifier
-                                .size(48.dp)
-                                .clip(RoundedCornerShape(16.dp))
-                                .background(MaterialTheme.colorScheme.onPrimary)
-                        ) {
-                            Icon(
-                                imageVector = Icons.Default.Add,
-                                contentDescription = "Create Collection",
-                                tint = MaterialTheme.colorScheme.surfaceVariant
-                            )
-                        }
-                    }
-                }
-
-                item(span = { GridItemSpan(maxLineSpan) }) {
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(horizontal = 8.dp)
-                            .padding(top = 12.dp, bottom = 8.dp),
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.SpaceBetween
-                    ) {
-                        Text(
-                            text = "Screenshots",
-                            style = MaterialTheme.typography.titleMedium.copy(
-                                fontWeight = FontWeight.SemiBold,
-                                color = MaterialTheme.colorScheme.onBackground
+                                .matchParentSize()
+                                .clip(RoundedCornerShape(24.dp))
+                                .background(Color.White.copy(alpha = 0.15f))
+                                .blur(16.dp)
+                        )
+                        OutlinedTextField(
+                            value = searchQuery,
+                            onValueChange = onSearchQueryChanged,
+                            placeholder = { Text("Search...") },
+                            modifier = Modifier.fillMaxSize(),
+                            shape = RoundedCornerShape(24.dp),
+                            singleLine = true,
+                            colors = TextFieldDefaults.colors(
+                                focusedContainerColor = Color.Transparent.copy(alpha = 0.7f),
+                                unfocusedContainerColor = MaterialTheme.colorScheme.surfaceVariant,
+                                focusedIndicatorColor = Color.Transparent.copy(alpha = 0.7f),
+                                unfocusedIndicatorColor = MaterialTheme.colorScheme.surfaceVariant,
+                                focusedTextColor = MaterialTheme.colorScheme.onBackground,
+                                unfocusedTextColor = MaterialTheme.colorScheme.primary,
+                                cursorColor = MaterialTheme.colorScheme.primary,
+                                unfocusedPlaceholderColor = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.7f),
+                                focusedPlaceholderColor = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.7f)
                             )
                         )
-                        IconButton(onClick = { isTwoColumnGrid = !isTwoColumnGrid }) {
+                    }
+
+                    // This is the FAB and its expandable menu
+                    Column(
+                        horizontalAlignment = Alignment.End,
+                        verticalArrangement = Arrangement.spacedBy(16.dp),
+                        modifier = Modifier.align(Alignment.BottomEnd)
+                    ) {
+                        AnimatedFabMenu(
+                            expanded = fabMenuExpanded,
+                            onCapturePhotoClick = {
+                                fabMenuExpanded = false
+                                onCapturePhotoClick()
+                            },
+                            onPickFromGalleryClick = {
+                                fabMenuExpanded = false
+                                onPickFromGalleryClick()
+                            }
+                        )
+                        FloatingActionButton(
+                            onClick = { fabMenuExpanded = !fabMenuExpanded },
+                            containerColor = MaterialTheme.colorScheme.primary,
+                            modifier = Modifier.size(54.dp),
+                            shape = RoundedCornerShape(24.dp)
+                        ) {
                             Icon(
-                                imageVector = if (isTwoColumnGrid) Icons.Default.GridView else Icons.Default.CalendarViewMonth,
-                                contentDescription = "Toggle Grid Layout",
-                                modifier = Modifier.size(18.dp),
-                                tint = MaterialTheme.colorScheme.onBackground
+                                imageVector = if (!fabMenuExpanded) Icons.Default.Add else Icons.Default.Close,
+                                contentDescription = "Add",
+                                modifier = Modifier.size(32.dp),
+                                tint = MaterialTheme.colorScheme.onPrimary
                             )
                         }
                     }
-                }
-                items(items = images, key = { it.imageUri }) { imageEntity ->
-                    GalleryImageItem(
-                        image = imageEntity,
-                        onImageClick = onImageClick,
-                        isTwoColumnLayout = isTwoColumnGrid
-                    )
                 }
             }
         }
     }
 }
+
 
 @Composable
 private fun TooltipFab(
@@ -243,15 +329,11 @@ private fun TooltipFab(
         horizontalArrangement = Arrangement.spacedBy(8.dp),
         modifier = modifier
     ) {
-        AnimatedVisibility(
-            visible = labelVisible,
-            enter = fadeIn(tween(150)),
-            exit = fadeOut(tween(100))
-        ) {
+        if (labelVisible) {
             Box(
                 modifier = Modifier
                     .background(
-                        color = MaterialTheme.colorScheme.onSurfaceVariant.copy( alpha = 0.8f),
+                        color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.8f),
                         shape = RoundedCornerShape(12.dp)
                     )
                     .padding(horizontal = 12.dp, vertical = 6.dp)
@@ -263,17 +345,17 @@ private fun TooltipFab(
                 )
             }
         }
-
         SmallFloatingActionButton(
             onClick = onClick,
             containerColor = MaterialTheme.colorScheme.surfaceVariant,
-            contentColor = MaterialTheme.colorScheme.onSurfaceVariant,
+            contentColor = MaterialTheme.colorScheme.primary,
             shape = RoundedCornerShape(20.dp)
         ) {
             Icon(imageVector = icon, contentDescription = label)
         }
     }
 }
+
 @Composable
 private fun AnimatedFabMenu(
     expanded: Boolean,
@@ -289,10 +371,9 @@ private fun AnimatedFabMenu(
             areLabelsVisible = true
             menuAnimationProgress.animateTo(1f, tween(durationMillis = 250))
         } else {
-            areLabelsVisible = false
             scope.launch {
-                delay(100)
                 menuAnimationProgress.animateTo(0f, tween(durationMillis = 200))
+                areLabelsVisible = false
             }
         }
     }
@@ -324,19 +405,3 @@ private fun AnimatedFabMenu(
         }
     }
 }
-
-//@Preview(showBackground = true, backgroundColor = 0xFFFFFFFF)
-//@Composable
-//fun ScreenshotsGalleryScreenPreview() {
-//    MaterialTheme {
-//        ScreenshotsGalleryScreenWithFAB(
-//            images = listOf(),
-//            onViewCollectionsClick = {},
-//            onCreateCollectionClick = {},
-//            onCapturePhotoClick = {},
-//            onPickFromGalleryClick = {},
-//            onImageClick = {},
-//            onSettingsClick = {}
-//        )
-//    }
-//}
