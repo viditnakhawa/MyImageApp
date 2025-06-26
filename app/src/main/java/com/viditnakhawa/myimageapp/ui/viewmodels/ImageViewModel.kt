@@ -1,4 +1,4 @@
-package com.viditnakhawa.myimageapp.ui
+package com.viditnakhawa.myimageapp.ui.viewmodels
 
 import android.content.Context
 import android.net.Uri
@@ -9,13 +9,11 @@ import androidx.work.OneTimeWorkRequestBuilder
 import androidx.work.WorkManager
 import androidx.work.workDataOf
 import com.viditnakhawa.myimageapp.MLKitImgDescProcessor
-import com.viditnakhawa.myimageapp.MLKitImgDescProcessor.uriToBitmap
 import com.viditnakhawa.myimageapp.data.CollectionEntity
 import com.viditnakhawa.myimageapp.data.CollectionWithImages
 import com.viditnakhawa.myimageapp.data.ImageEntity
 import com.viditnakhawa.myimageapp.data.ImageRepository
 import com.viditnakhawa.myimageapp.processImageWithOCR
-import com.viditnakhawa.myimageapp.ui.modelmanager.ModelManagerViewModel
 import com.viditnakhawa.myimageapp.workers.MultimodalAnalysisWorker
 import dagger.hilt.android.lifecycle.HiltViewModel
 import dagger.hilt.android.qualifiers.ApplicationContext
@@ -56,7 +54,7 @@ class ImageViewModel @Inject constructor(
     val images: StateFlow<List<Uri>> = repository.allImages
         .stateIn(
             scope = viewModelScope,
-            started = SharingStarted.WhileSubscribed(5000L),
+            started = SharingStarted.Companion.WhileSubscribed(5000L),
             initialValue = emptyList()
         )
 
@@ -64,7 +62,7 @@ class ImageViewModel @Inject constructor(
     val collections: StateFlow<List<CollectionEntity>> = repository.collections
         .stateIn(
             scope = viewModelScope,
-            started = SharingStarted.WhileSubscribed(5000),
+            started = SharingStarted.Companion.WhileSubscribed(5000),
             initialValue = emptyList()
         )
 
@@ -86,17 +84,20 @@ class ImageViewModel @Inject constructor(
         }
     }
 
-    //PHASE 1 CODE
+    fun deleteImage(uri: Uri) {
+        viewModelScope.launch {
+            repository.deleteImage(uri)
+        }
+    }
+
     suspend fun getImageDetails(uri: Uri): ImageEntity? {
         return repository.getImageDetails(uri)
     }
 
-    //PHASE 1 CODE
-    suspend fun getImageDetailsFlow(uri: Uri): Flow<ImageEntity?> {
+    fun getImageDetailsFlow(uri: Uri): Flow<ImageEntity?> {
         return repository.getImageDetailsFlow(uri)
     }
 
-    //PHASE 1 CODE
     fun updateImageDetails(imageDetails: ImageEntity) {
         viewModelScope.launch {
             repository.updateImageDetails(imageDetails)
@@ -121,7 +122,7 @@ class ImageViewModel @Inject constructor(
         }
     }.stateIn(
         scope = viewModelScope,
-        started = SharingStarted.WhileSubscribed(5000L),
+        started = SharingStarted.Companion.WhileSubscribed(5000L),
         initialValue = emptyList()
     )
 
@@ -145,7 +146,7 @@ class ImageViewModel @Inject constructor(
     val collectionsWithImages: StateFlow<List<CollectionWithImages>> = repository.collectionsWithImages
         .stateIn(
             scope = viewModelScope,
-            started = SharingStarted.WhileSubscribed(5000),
+            started = SharingStarted.Companion.WhileSubscribed(5000),
             initialValue = emptyList()
         )
 
@@ -216,7 +217,7 @@ class ImageViewModel @Inject constructor(
             val extractedText: String
             if (isGemmaReady) {
                 // Primary Path: Use Gemma for direct, high-quality OCR
-                val bitmap = uriToBitmap(applicationContext, uri) ?: return@launch
+                val bitmap = MLKitImgDescProcessor.uriToBitmap(applicationContext, uri) ?: return@launch
                 extractedText = modelManagerViewModel.extractTextFromImageWithGemma(bitmap)
             } else {
                 // Fallback Path: Use ML Kit for reliable raw OCR
@@ -228,4 +229,3 @@ class ImageViewModel @Inject constructor(
         }
     }
 }
-

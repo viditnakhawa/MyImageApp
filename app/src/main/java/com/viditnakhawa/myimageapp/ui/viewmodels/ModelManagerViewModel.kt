@@ -1,4 +1,4 @@
-package com.viditnakhawa.myimageapp.ui.modelmanager
+package com.viditnakhawa.myimageapp.ui.viewmodels
 
 import android.content.Context
 import android.graphics.Bitmap
@@ -68,6 +68,7 @@ data class ModelManagerUiState(
     val modelDownloadStatus: Map<String, ModelDownloadStatus>,
     val modelInitializationStatus: Map<String, ModelInitializationStatus>,
     val selectedModel: Model = GEMMA_E2B_MODEL,
+    val showDeleteConfirmationDialog: Boolean = false,
 )
 
 @HiltViewModel
@@ -160,6 +161,15 @@ class ModelManagerViewModel @Inject constructor(
     fun deleteDownload(model: Model) {
         // This function will tell the repository to delete the download for the given model.
         downloadRepository.deleteDownload(model)
+        _uiState.update { it.copy(showDeleteConfirmationDialog = false) }
+    }
+
+    fun onShowDeleteConfirmationDialog() {
+        _uiState.update { it.copy(showDeleteConfirmationDialog = true) }
+    }
+
+    fun onDismissDeleteConfirmationDialog() {
+        _uiState.update { it.copy(showDeleteConfirmationDialog = false) }
     }
 
     fun initializeModel(context: Context, model: Model) {
@@ -305,11 +315,21 @@ class ModelManagerViewModel @Inject constructor(
         suspendCancellableCoroutine { continuation ->
             Log.d(TAG, "Sending image to Gemma for direct OCR.")
             val prompt = """
-                You are an Optical Character Recognition (OCR) engine. 
-                Extract all visible text from the provided image. 
-                Preserve the original formatting and line breaks as best as possible. 
-                Do not summarize, interpret, or add any text that is not visually present.
-                Respond ONLY with the extracted text.
+                SYSTEM_TASK:
+                You are an advanced Optical Character Recognition (OCR) engine. Your primary function is to accurately extract and transcribe the main textual content from an image, intelligently distinguishing it from user interface elements.
+                
+                INSTRUCTIONS:
+                1.  **Identify the Core Content:** First, analyze the image to identify the main block of text a user would be reading. This could be an article, a post, a message, or a description.
+                2.  **Prioritize Content Over UI:** Your priority is to extract this core content. Text from UI elements should be ignored.
+                3.  **Ignore UI Noise:** Do NOT extract text or symbols from the following UI elements:
+                    * Buttons (e.g., "Like," "Share," "Follow")
+                    * Icons (e.g., notification bells, user avatars, settings cogs)
+                    * Menus and navigation bars
+                    * Timestamps that are part of the UI frame (e.g., "2:30 PM")
+                    * Non-content labels (e.g., "Replies," "For you")
+                4.  **Handle Artifacts:** Ignore any text that is severely distorted, garbled, or unreadable due to digital artifacts or poor image quality.
+                5.  **Preserve Formatting:** Maintain the original line breaks, paragraphs, and spacing of the core content as accurately as possible.
+                6.  **Final Output:** Your final response must contain ONLY the extracted core text. Do not add any commentary, summaries, or labels like "Extracted Text:".
             """.trimIndent()
 
             var fullResponse = ""
@@ -334,6 +354,16 @@ class ModelManagerViewModel @Inject constructor(
             )
         }
 
+    fun isGemmaInitialized(): Boolean {
+        val model = GEMMA_E2B_MODEL
+        val downloadStatus = uiState.value.modelDownloadStatus[model.name]?.status
+        val initStatus = uiState.value.modelInitializationStatus[model.name]?.status
+
+        return downloadStatus == ModelDownloadStatusType.SUCCEEDED &&
+                initStatus == ModelInitializationStatusType.INITIALIZED
+    }
+
+//    PLANS FOR FUTURE...
 //    @OptIn(ExperimentalCoroutinesApi::class)
 //    suspend fun polishTextWithGemma(rawText: String): String =
 //        suspendCancellableCoroutine { continuation ->
@@ -366,14 +396,4 @@ class ModelManagerViewModel @Inject constructor(
 //                }
 //            )
 //        }
-
-    fun isGemmaInitialized(): Boolean {
-        val model = GEMMA_E2B_MODEL // Your model definition
-        val downloadStatus = uiState.value.modelDownloadStatus[model.name]?.status
-        val initStatus = uiState.value.modelInitializationStatus[model.name]?.status
-
-        return downloadStatus == ModelDownloadStatusType.SUCCEEDED &&
-                initStatus == ModelInitializationStatusType.INITIALIZED
-    }
-
 }
