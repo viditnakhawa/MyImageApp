@@ -1,4 +1,4 @@
-package com.viditnakhawa.myimageapp.ui.common
+/*package com.viditnakhawa.myimageapp.ui.common
 
 import androidx.work.WorkManager
 import androidx.lifecycle.ViewModelProvider
@@ -28,4 +28,4 @@ object ViewModelProvider {
             )
         }
     }
-}
+}*/

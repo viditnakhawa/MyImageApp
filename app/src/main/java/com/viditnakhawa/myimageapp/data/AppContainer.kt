@@ -1,8 +1,9 @@
-package com.viditnakhawa.myimageapp.data
+/*package com.viditnakhawa.myimageapp.data
 
 import android.content.Context
 import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.Preferences
+import kotlinx.coroutines.CoroutineScope
 
 /**
  * App container for Dependency injection.
@@ -17,7 +18,9 @@ interface AppContainer {
 /**
  * Default implementation of the AppContainer interface.
  */
-class DefaultAppContainer(private val ctx: Context, dataStore: DataStore<Preferences>) : AppContainer {
+class AppDataContainer(private val ctx: Context,
+                       dataStore: DataStore<Preferences>,
+                       private val scope: CoroutineScope) : AppContainer {
     override val context = ctx
 
     override val dataStoreRepository by lazy {
@@ -29,7 +32,11 @@ class DefaultAppContainer(private val ctx: Context, dataStore: DataStore<Prefere
     }
     // Add the implementation that provides the ImageRepository
     override val imageRepository: ImageRepository by lazy {
-        ImageRepository(AppDatabase.getDatabase(ctx).imageDao())
+        ImageRepository(
+            AppDatabase.getDatabase(context).imageDao(),
+            context, // Pass context
+            scope // Pass scope
+        )
     }
-}
+}*/
 
