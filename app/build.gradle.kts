@@ -5,6 +5,8 @@ plugins {
     id("com.google.devtools.ksp")
     id("androidx.room")
     id("com.google.android.gms.oss-licenses-plugin")
+    kotlin("kapt")
+    alias(libs.plugins.hilt.gradle)
 }
 
 android {
@@ -117,5 +119,13 @@ dependencies {
     debugImplementation(libs.androidx.ui.tooling)
     debugImplementation(libs.androidx.ui.test.manifest)
     implementation("com.google.android.gms:play-services-oss-licenses:17.1.0")
+
+    implementation(libs.hilt.android)
+    kapt(libs.hilt.compiler)
+    implementation(libs.hilt.navigation.compose)
+    implementation(libs.hilt.ext.work)
+    kapt(libs.hilt.ext.compiler)
+    implementation(libs.hilt.work)
+    implementation(libs.androidx.work.runtime.ktx)
 
 }
