@@ -2,13 +2,21 @@ package com.viditnakhawa.myimageapp.ui.analysis
 
 import android.content.Intent
 import android.net.Uri
-import androidx.compose.runtime.*
+import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.produceState
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.platform.LocalContext
 import androidx.navigation.NavController
 import com.viditnakhawa.myimageapp.PostDetails
-import com.viditnakhawa.myimageapp.ui.ImageViewModel
-import com.viditnakhawa.myimageapp.ui.modelmanager.ModelManagerViewModel
 import com.viditnakhawa.myimageapp.ui.navigation.AppRoutes
+import com.viditnakhawa.myimageapp.ui.viewmodels.ImageViewModel
+import com.viditnakhawa.myimageapp.ui.viewmodels.ModelManagerViewModel
 
 @Composable
 fun AnalysisContainerScreen(
@@ -44,6 +52,27 @@ fun AnalysisContainerScreen(
             isLoading = false
         }
     }
+    var showDeleteDialog by remember { mutableStateOf(false) }
+
+    if (showDeleteDialog) {
+        AlertDialog(
+            onDismissRequest = { showDeleteDialog = false },
+            title = { Text("Delete Screenshot") },
+            text = { Text("This will permanently delete the screenshot and all of its associated analysis from the app. This action cannot be undone.") },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        imageViewModel.deleteImage(imageUri)
+                        showDeleteDialog = false
+                        navController.popBackStack()
+                    }
+                ) { Text("Delete") }
+            },
+            dismissButton = {
+                TextButton(onClick = { showDeleteDialog = false }) { Text("Cancel") }
+            }
+        )
+    }
 
     val isGemmaReady = modelManagerViewModel.isGemmaInitialized()
 
@@ -68,10 +97,7 @@ fun AnalysisContainerScreen(
             }
             context.startActivity(Intent.createChooser(shareIntent, "Share Image"))
         },
-        onDelete = { uri ->
-            imageViewModel.ignoreImage(uri)
-            navController.popBackStack()
-        },
+        onDelete = { showDeleteDialog = true },
         onRecognizeText = { uri ->
             analysisMessage = if (isGemmaReady) {
                 "Gemma is reading the image..."

@@ -266,9 +266,9 @@ fun ScreenshotsGalleryScreenWithFAB(
                             singleLine = true,
                             colors = TextFieldDefaults.colors(
                                 focusedContainerColor = Color.Transparent.copy(alpha = 0.7f),
-                                unfocusedContainerColor = MaterialTheme.colorScheme.surfaceVariant,
+                                unfocusedContainerColor = MaterialTheme.colorScheme.background,
                                 focusedIndicatorColor = Color.Transparent.copy(alpha = 0.7f),
-                                unfocusedIndicatorColor = MaterialTheme.colorScheme.surfaceVariant,
+                                unfocusedIndicatorColor = MaterialTheme.colorScheme.background,
                                 focusedTextColor = MaterialTheme.colorScheme.onBackground,
                                 unfocusedTextColor = MaterialTheme.colorScheme.primary,
                                 cursorColor = MaterialTheme.colorScheme.primary,

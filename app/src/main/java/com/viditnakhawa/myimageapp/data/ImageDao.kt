@@ -26,6 +26,9 @@ interface ImageDao {
     @Query("UPDATE images SET isIgnored = 1 WHERE imageUri = :uriString")
     suspend fun ignoreImage(uriString: String)
 
+    @Query("DELETE FROM images WHERE imageUri = :uriString")
+    suspend fun deleteImageByUri(uriString: String)
+
     @Query("SELECT * FROM images WHERE imageUri = :uri")
     fun getImageByUri(uri: String): Flow<ImageEntity?>
 

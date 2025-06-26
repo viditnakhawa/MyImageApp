@@ -2,10 +2,13 @@ package com.viditnakhawa.myimageapp.ui.collections
 
 import android.net.Uri
 import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.PaddingValues
@@ -43,22 +46,31 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.core.net.toUri
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.NavController
 import coil.compose.AsyncImage
 import coil.request.ImageRequest
-import com.viditnakhawa.myimageapp.ui.ImageViewModel
-import com.viditnakhawa.myimageapp.ui.modelmanager.ModelManagerViewModel
+import com.viditnakhawa.myimageapp.data.ImageEntity
+import com.viditnakhawa.myimageapp.ui.viewmodels.ImageViewModel
+import com.viditnakhawa.myimageapp.ui.gallery.GalleryImageCard
+import com.viditnakhawa.myimageapp.ui.viewmodels.ModelManagerViewModel
 import com.viditnakhawa.myimageapp.ui.navigation.AppRoutes
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -80,7 +92,6 @@ fun CollectionDetailScreen(
         mutableStateOf(collectionWithImages?.collection?.name ?: "")
     }
 
-    // When we exit selection mode, clear the selection
     LaunchedEffect(isSelectionMode) {
         if (!isSelectionMode) {
             selectedImageUris = emptySet()
@@ -172,7 +183,9 @@ fun CollectionDetailScreen(
         collectionWithImages?.let {
             if (it.images.isEmpty()) {
                 Box(
-                    modifier = Modifier.fillMaxSize().padding(padding),
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .padding(padding),
                     contentAlignment = Alignment.Center
                 ) {
                     Text("This collection is empty.")
@@ -186,30 +199,43 @@ fun CollectionDetailScreen(
                     horizontalArrangement = Arrangement.spacedBy(4.dp)
                 ) {
                     items(it.images, key = { image -> image.imageUri }) { image ->
-                        val uri = image.imageUri.toUri()
-                        val isSelected = selectedImageUris.contains(uri)
-                        GridItem(
-                            uri = uri,
-                            isSelected = isSelected,
-                            isSelectionMode = isSelectionMode,
-                            onItemClick = {
-                                if (isSelectionMode) {
-                                    selectedImageUris = if (isSelected) {
-                                        selectedImageUris - uri
-                                    } else {
-                                        selectedImageUris + uri
-                                    }
+                        val isSelected = selectedImageUris.contains(image.imageUri.toUri())
+                        val onItemClickAction = { clickedImage: ImageEntity ->
+                            if (isSelectionMode) {
+                                val uri = clickedImage.imageUri.toUri()
+                                selectedImageUris = if (isSelected) {
+                                    selectedImageUris - uri
                                 } else {
-                                    imageViewModel.prepareForAnalysis(uri, modelManagerViewModel.isGemmaInitialized())
-                                    navController.navigate(AppRoutes.analysisScreen(Uri.encode(uri.toString())))
+                                    selectedImageUris + uri
                                 }
+                            } else {
+                                imageViewModel.prepareForAnalysis(clickedImage.imageUri.toUri(), modelManagerViewModel.isGemmaInitialized())
+                                navController.navigate(AppRoutes.analysisScreen(Uri.encode(clickedImage.imageUri)))
                             }
-                        )
+                        }
+
+                        if (gridColumns == 2 && !isSelectionMode) {
+                            GalleryImageCard(
+                                image = image,
+                                modifier = Modifier
+                                    .aspectRatio(1f)
+                                    .clickable { onItemClickAction(image) }
+                            )
+                        } else {
+                            GridItem(
+                                image = image,
+                                isSelected = isSelected,
+                                isSelectionMode = isSelectionMode,
+                                onItemClick = onItemClickAction
+                            )
+                        }
                     }
                 }
             }
         } ?: Box(
-            modifier = Modifier.fillMaxSize().padding(padding),
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(padding),
             contentAlignment = Alignment.Center
         ) {
             CircularProgressIndicator()
@@ -265,21 +291,42 @@ fun CollectionDetailScreen(
 
 @Composable
 private fun GridItem(
-    uri: Uri,
+    image: ImageEntity,
     isSelected: Boolean,
     isSelectionMode: Boolean,
-    onItemClick: () -> Unit
+    onItemClick: (ImageEntity) -> Unit
 ) {
+    var showTitleOverlay by remember { mutableStateOf(false) }
+    val scope = rememberCoroutineScope()
+    val titleAlpha by animateFloatAsState(
+        targetValue = if (showTitleOverlay) 1f else 0f,
+        animationSpec = tween(300),
+        label = "TitleAlpha"
+    )
+
     Box(
         modifier = Modifier
             .aspectRatio(1f)
             .clip(RoundedCornerShape(12.dp))
-            .clickable(onClick = onItemClick),
+            .pointerInput(image.imageUri) {
+                detectTapGestures(
+                    onTap = { onItemClick(image) },
+                    onDoubleTap = {
+                        if (image.title != null) {
+                            scope.launch {
+                                showTitleOverlay = true
+                                delay(3000L) // Show for 3 seconds
+                                showTitleOverlay = false
+                            }
+                        }
+                    }
+                )
+            },
         contentAlignment = Alignment.Center
     ) {
         AsyncImage(
             model = ImageRequest.Builder(LocalContext.current)
-                .data(uri)
+                .data(image.imageUri.toUri())
                 .crossfade(true)
                 .build(),
             contentDescription = "Collection Image",
@@ -287,6 +334,7 @@ private fun GridItem(
             modifier = Modifier.fillMaxSize()
         )
 
+        // Selection overlay logic
         AnimatedVisibility(visible = isSelectionMode, enter = fadeIn(), exit = fadeOut()) {
             Box(
                 modifier = Modifier
@@ -304,6 +352,30 @@ private fun GridItem(
                         modifier = Modifier.align(Alignment.Center)
                     )
                 }
+            }
+        }
+
+        // Title overlay logic (from double-tap)
+        if (titleAlpha > 0f) {
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .alpha(titleAlpha)
+                    .background(
+                        Brush.verticalGradient(
+                            colors = listOf(Color.Transparent, Color.Black.copy(alpha = 0.8f))
+                        )
+                    )
+                    .padding(8.dp),
+                contentAlignment = Alignment.BottomStart
+            ) {
+                Text(
+                    text = image.title.orEmpty(),
+                    color = Color.White,
+                    style = MaterialTheme.typography.bodyMedium,
+                    maxLines = 4,
+                    overflow = TextOverflow.Ellipsis
+                )
             }
         }
     }

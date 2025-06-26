@@ -13,7 +13,6 @@ import kotlinx.coroutines.flow.firstOrNull
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
-import java.io.File
 
 class ImageRepository(
     private val imageDao: ImageDao,
@@ -44,7 +43,6 @@ class ImageRepository(
     }
 
     suspend fun addImage(uri: Uri) {
-        // Add the lastModified timestamp
         val imageEntity = ImageEntity(
             imageUri = uri.toString(),
             lastModified = System.currentTimeMillis()
@@ -96,10 +94,12 @@ class ImageRepository(
         }
 
         // 2. Remove images from our database that are no longer on disk
+        /*
         val deletedUris = (databaseUris - mediaStoreUris).toList()
         if (deletedUris.isNotEmpty()) {
             imageDao.deleteImagesByUri(deletedUris)
         }
+        */
     }
 
     private fun getTimestampForUri(uri: Uri): Long? {
@@ -122,6 +122,10 @@ class ImageRepository(
         imageDao.ignoreImage(uri.toString())
     }
 
+    suspend fun deleteImage(uri: Uri) {
+        imageDao.deleteImageByUri(uri.toString())
+    }
+
     suspend fun updateImageSummary(uriString: String, summary: String) {
         withContext(Dispatchers.IO) {
             val image = imageDao.getImageByUri(uriString).firstOrNull()
@@ -132,85 +136,16 @@ class ImageRepository(
         }
     }
 
-    //PHASE 1 CODE
     suspend fun getImageDetails(uri: Uri): ImageEntity? {
         return imageDao.getImageByUri(uri.toString()).firstOrNull()
     }
 
-    suspend fun getImageDetailsFlow(uri: Uri): Flow<ImageEntity?> {
+    fun getImageDetailsFlow(uri: Uri): Flow<ImageEntity?> {
         return imageDao.getImageByUri(uri.toString())
     }
 
-    //PHASE 1 CODE
     suspend fun updateImageDetails(imageDetails: ImageEntity) {
         imageDao.updateImage(imageDetails)
-    }
-
-    //PHASE 1 CODE
-    fun isGemmaModelDownloaded(context: Context): Boolean {
-        val model = GEMMA_E2B_MODEL
-        val file = File(model.getPath(context))
-        return file.exists() && file.length() >= model.sizeInBytes
-    }
-
-    suspend fun getUnanalyzedImages(): List<ImageEntity> {
-        return imageDao.getUnanalyzedImages()
-    }
-
-    fun searchImages(query: String): Flow<List<ImageEntity>> {
-        return imageDao.searchImages(query)
-    }
-
-    /**
-     * Scans the device's MediaStore for screenshots and only adds new ones to the database.
-     * This is much more efficient on subsequent app launches.
-     */
-    suspend fun refreshImagesFromDevice(context: Context) {
-        withContext(Dispatchers.IO) {
-            val collection = MediaStore.Images.Media.getContentUri(MediaStore.VOLUME_EXTERNAL)
-            val projection = arrayOf(
-                MediaStore.Images.Media._ID,
-                MediaStore.Images.Media.DATE_MODIFIED
-            )
-            val selection = "${MediaStore.Images.Media.RELATIVE_PATH} LIKE ?"
-            val selectionArgs = arrayOf("%${Environment.DIRECTORY_SCREENSHOTS}%")
-
-            val newImagesToInsert = mutableListOf<ImageEntity>()
-            val existingUris = imageDao.getAllImageUris().firstOrNull()?.toSet() ?: emptySet()
-
-            context.contentResolver.query(
-                collection,
-                projection,
-                selection,
-                selectionArgs,
-                "${MediaStore.Images.Media.DATE_MODIFIED} DESC" // Sort by date here as well
-            )?.use { cursor ->
-                val idColumn = cursor.getColumnIndexOrThrow(MediaStore.Images.Media._ID)
-                val dateModifiedColumn = cursor.getColumnIndexOrThrow(MediaStore.Images.Media.DATE_MODIFIED)
-
-                while (cursor.moveToNext()) {
-                    val id = cursor.getLong(idColumn)
-                    val uri = ContentUris.withAppendedId(
-                        MediaStore.Images.Media.EXTERNAL_CONTENT_URI, id
-                    )
-                    val uriString = uri.toString()
-
-                    if (!existingUris.contains(uriString)) {
-                        val lastModified = cursor.getLong(dateModifiedColumn) * 1000L // Use milliseconds
-                        val imageEntity = ImageEntity(
-                            imageUri = uriString,
-                            lastModified = lastModified,
-                            isIgnored = false
-                        )
-                        newImagesToInsert.add(imageEntity)
-                    }
-                }
-            }
-
-            if (newImagesToInsert.isNotEmpty()) {
-                imageDao.insertImages(newImagesToInsert)
-            }
-        }
     }
 
     // --- Collection Functions ---
