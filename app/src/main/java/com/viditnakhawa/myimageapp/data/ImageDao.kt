@@ -1,6 +1,5 @@
 package com.viditnakhawa.myimageapp.data
 
-import android.net.Uri
 import androidx.room.Dao
 import androidx.room.Insert
 import androidx.room.OnConflictStrategy
@@ -39,6 +38,15 @@ interface ImageDao {
     @Query("SELECT * FROM images WHERE sourceApp IS NULL")
     suspend fun getUnanalyzedImages(): List<ImageEntity>
 
+    @Query("SELECT * FROM images WHERE isIgnored = 0 AND (title LIKE :query OR content LIKE :query OR polishedOcr LIKE :query OR tags LIKE :query) ORDER BY lastModified DESC")
+    fun searchImages(query: String): Flow<List<ImageEntity>>
+
+    @Query("SELECT imageUri FROM images")
+    suspend fun getAllUris(): List<String>
+
+    @Query("DELETE FROM images WHERE imageUri IN (:deletedUris)")
+    suspend fun deleteImagesByUri(deletedUris: List<String>)
+
     // --- Collection Functions ---
     @Insert(onConflict = OnConflictStrategy.IGNORE)
     suspend fun insertCollection(collection: CollectionEntity): Long
@@ -72,4 +80,5 @@ interface ImageDao {
 
     @Query("UPDATE collections SET name = :newName WHERE id = :collectionId")
     suspend fun updateCollectionName(collectionId: Long, newName: String)
+
 }
