@@ -1,33 +1,36 @@
 package com.viditnakhawa.myimageapp.workers
 
 import android.content.Context
-import android.net.Uri
 import android.util.Log
+import androidx.core.net.toUri
+import androidx.hilt.work.HiltWorker
 import androidx.work.CoroutineWorker
 import androidx.work.WorkerParameters
 import com.google.gson.Gson
 import com.google.gson.JsonSyntaxException
-import com.viditnakhawa.myimageapp.MyApplication
-import com.viditnakhawa.myimageapp.data.GEMMA_E2B_MODEL
-import com.viditnakhawa.myimageapp.data.ImageEntity
-import com.viditnakhawa.myimageapp.data.StructuredAnalysis
 import com.viditnakhawa.myimageapp.LlmChatModelHelper
 import com.viditnakhawa.myimageapp.MLKitImgDescProcessor.uriToBitmap
+import com.viditnakhawa.myimageapp.data.GEMMA_E2B_MODEL
+import com.viditnakhawa.myimageapp.data.ImageEntity
+import com.viditnakhawa.myimageapp.data.ImageRepository
+import com.viditnakhawa.myimageapp.data.StructuredAnalysis
+import dagger.assisted.Assisted
+import dagger.assisted.AssistedInject
 import kotlinx.coroutines.suspendCancellableCoroutine
 import kotlin.coroutines.resume
-import androidx.core.net.toUri
 
 private const val TAG = "MultimodalAnalysisWorker"
 
-class MultimodalAnalysisWorker(
-    appContext: Context,
-    workerParams: WorkerParameters
+@HiltWorker
+class MultimodalAnalysisWorker @AssistedInject constructor(
+    @Assisted appContext: Context,
+    @Assisted workerParams: WorkerParameters,
+    private val repository: ImageRepository
 ) : CoroutineWorker(appContext, workerParams) {
 
     override suspend fun doWork(): Result {
         val imageUriString = inputData.getString("IMAGE_URI") ?: return Result.failure()
         val imageUri = imageUriString.toUri()
-        val repository = (applicationContext as MyApplication).container.imageRepository
 
         try {
             LlmChatModelHelper.resetSession(GEMMA_E2B_MODEL)
@@ -65,23 +68,23 @@ class MultimodalAnalysisWorker(
         // This prompt expects the model to do all the work from the image alone.
         return """
         SYSTEM_TASK:
-        You are an expert-level screenshot classification and summarization agent. Your task is to analyze the provided image and respond ONLY with a valid, structured JSON object.
+        You are an expert-level screenshot data extraction agent. Your goal is to identify key entities and structured information from the provided image. Respond ONLY with a valid, structured JSON object based on the schema.
 
         INSTRUCTIONS:
-        1.  **Analyze Image:** Examine the visual elements and any text in the screenshot.
-        2.  **Determine Source App:** Identify the application where the screenshot was taken (e.g., "Twitter", "Gmail", "Instagram", "Unknown").
-        3.  **Create Title:** Write a very short, descriptive title (max 10 words).
-        4.  **Create Summary:** Write a brief, three or four-sentence summary of the main content.
-        5.  **Extract Tags:** List 3 to 5 relevant keywords as an array of strings.
-        
+        1.  **Identify Core Entity:** Determine the main subject (e.g., Social Media Post, Weather Forecast, News Article).
+        2.  **Create Factual Title:** Write a short, factual title describing the subject.
+        3.  **Extract Key Details:** Pull out all relevant data points. Format these as a bulleted list within a single string for the 'details' field. Do not write a narrative summary.
+        4.  **Generate Keywords:** Create a list of 3-5 relevant tags.
+
         JSON_SCHEMA:
         {
           "title": "string",
-          "summary": "string",
           "sourceApp": "string",
+          "details": "string",
           "tags": ["string"]
         }
-        
+        Analyze the provided image and generate the JSON response now.
+
         RESPONSE:
         """.trimIndent()
     }
@@ -114,3 +117,4 @@ class MultimodalAnalysisWorker(
             )
         }
 }
+

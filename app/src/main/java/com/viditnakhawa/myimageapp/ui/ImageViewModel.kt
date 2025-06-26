@@ -4,34 +4,54 @@ import android.content.Context
 import android.net.Uri
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.viditnakhawa.myimageapp.data.CollectionEntity
-import com.viditnakhawa.myimageapp.data.CollectionWithImages
-import com.viditnakhawa.myimageapp.data.ImageEntity
-import com.viditnakhawa.myimageapp.data.ImageRepository
-import kotlinx.coroutines.flow.Flow
-import kotlinx.coroutines.flow.SharingStarted
-import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.stateIn
-import kotlinx.coroutines.launch
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.withContext
 import androidx.work.ExistingWorkPolicy
 import androidx.work.OneTimeWorkRequestBuilder
 import androidx.work.WorkManager
 import androidx.work.workDataOf
-import com.viditnakhawa.myimageapp.LlmChatModelHelper
 import com.viditnakhawa.myimageapp.MLKitImgDescProcessor
 import com.viditnakhawa.myimageapp.MLKitImgDescProcessor.uriToBitmap
-import com.viditnakhawa.myimageapp.data.GEMMA_E2B_MODEL
+import com.viditnakhawa.myimageapp.data.CollectionEntity
+import com.viditnakhawa.myimageapp.data.CollectionWithImages
+import com.viditnakhawa.myimageapp.data.ImageEntity
+import com.viditnakhawa.myimageapp.data.ImageRepository
 import com.viditnakhawa.myimageapp.processImageWithOCR
 import com.viditnakhawa.myimageapp.ui.modelmanager.ModelManagerViewModel
 import com.viditnakhawa.myimageapp.workers.MultimodalAnalysisWorker
+import dagger.hilt.android.lifecycle.HiltViewModel
+import dagger.hilt.android.qualifiers.ApplicationContext
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.FlowPreview
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.SharingStarted
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.debounce
+import kotlinx.coroutines.flow.stateIn
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
+import javax.inject.Inject
 
-class ImageViewModel(
+@OptIn(ExperimentalCoroutinesApi::class)
+@HiltViewModel
+class ImageViewModel @Inject constructor(
     private val repository: ImageRepository,
     private val workManager: WorkManager,
-    private val applicationContext: Context
+    @ApplicationContext private val applicationContext: Context
 ) : ViewModel() {
+
+    private val _searchQuery = MutableStateFlow("")
+    val searchQuery: StateFlow<String> = _searchQuery.asStateFlow()
+    val allImages: Flow<List<ImageEntity>> = repository.allImageEntities
+    private val allDatabaseImages = repository.allImageEntities
+
+    init {
+        viewModelScope.launch {
+            repository.syncScreenshotsFromDevice()
+        }
+    }
 
     val images: StateFlow<List<Uri>> = repository.allImages
         .stateIn(
@@ -39,8 +59,6 @@ class ImageViewModel(
             started = SharingStarted.WhileSubscribed(5000L),
             initialValue = emptyList()
         )
-
-    val allImages: Flow<List<ImageEntity>> = repository.allImageEntities
 
 
     val collections: StateFlow<List<CollectionEntity>> = repository.collections
@@ -83,6 +101,32 @@ class ImageViewModel(
         viewModelScope.launch {
             repository.updateImageDetails(imageDetails)
         }
+    }
+
+    @OptIn(FlowPreview::class, ExperimentalCoroutinesApi::class)
+    val searchedImages: StateFlow<List<ImageEntity>> = combine(
+        allDatabaseImages,
+        searchQuery.debounce(300) // Debounce adds a small delay for a better user experience
+    ) { images, query ->
+        if (query.isBlank()) {
+            images
+        } else {
+            val lowerCaseQuery = query.lowercase().trim()
+            images.filter { image ->
+                image.title?.lowercase()?.contains(lowerCaseQuery) == true ||
+                        image.content?.lowercase()?.contains(lowerCaseQuery) == true ||
+                        image.polishedOcr?.lowercase()?.contains(lowerCaseQuery) == true ||
+                        image.tags?.any { tag -> tag.lowercase().contains(lowerCaseQuery) } == true
+            }
+        }
+    }.stateIn(
+        scope = viewModelScope,
+        started = SharingStarted.WhileSubscribed(5000L),
+        initialValue = emptyList()
+    )
+
+    fun onSearchQueryChanged(newQuery: String) {
+        _searchQuery.value = newQuery
     }
 
     fun createCollection(name: String) {
@@ -184,3 +228,4 @@ class ImageViewModel(
         }
     }
 }
+

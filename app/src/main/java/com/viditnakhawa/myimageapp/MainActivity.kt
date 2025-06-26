@@ -6,24 +6,20 @@ import android.os.Build
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
-import androidx.activity.viewModels
-import androidx.compose.runtime.LaunchedEffect
+import androidx.activity.enableEdgeToEdge
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
-import androidx.activity.enableEdgeToEdge
 import androidx.core.content.ContextCompat
-import com.viditnakhawa.myimageapp.data.GEMMA_E2B_MODEL
+import androidx.navigation.compose.rememberNavController
 import com.viditnakhawa.myimageapp.ui.PermissionsScreen
-import com.viditnakhawa.myimageapp.ui.common.ViewModelProvider
-import com.viditnakhawa.myimageapp.ui.modelmanager.ModelManagerViewModel
 import com.viditnakhawa.myimageapp.ui.navigation.AppNavigation
 import com.viditnakhawa.myimageapp.ui.theme.MyImageAppTheme
+import dagger.hilt.android.AndroidEntryPoint
 
+@AndroidEntryPoint
 class MainActivity : ComponentActivity() {
-
-    private val modelManagerViewModel: ModelManagerViewModel by viewModels { ViewModelProvider.Factory }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -33,16 +29,9 @@ class MainActivity : ComponentActivity() {
         setContent {
             MyImageAppTheme {
                 var permissionsGranted by remember { mutableStateOf(checkAllPermissions()) }
-
                 if (permissionsGranted) {
-                    LaunchedEffect(Unit) {
-                        (application as MyApplication).container.imageRepository.refreshImagesFromDevice(applicationContext)
-                        val isModelDownloaded = (application as MyApplication).container.imageRepository.isGemmaModelDownloaded(this@MainActivity)
-                        if (isModelDownloaded && !modelManagerViewModel.isGemmaInitialized()) {
-                            modelManagerViewModel.initializeModel(this@MainActivity, GEMMA_E2B_MODEL)
-                        }
-                    }
-                    AppNavigation()
+                    val navController = rememberNavController()
+                    AppNavigation(navController = navController)
                 } else {
                     PermissionsScreen(onPermissionsGranted = { permissionsGranted = true })
                 }
@@ -59,3 +48,4 @@ class MainActivity : ComponentActivity() {
         return permissions.all { ContextCompat.checkSelfPermission(this, it) == PackageManager.PERMISSION_GRANTED }
     }
 }
+

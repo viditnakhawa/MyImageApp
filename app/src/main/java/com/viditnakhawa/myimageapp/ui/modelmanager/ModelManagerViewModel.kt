@@ -11,9 +11,19 @@ import androidx.work.ExistingWorkPolicy
 import androidx.work.OneTimeWorkRequestBuilder
 import androidx.work.WorkManager
 import com.viditnakhawa.myimageapp.LlmChatModelHelper
-import com.viditnakhawa.myimageapp.data.*
+import com.viditnakhawa.myimageapp.data.ASK_IMAGE_TASK
+import com.viditnakhawa.myimageapp.data.AccessTokenData
+import com.viditnakhawa.myimageapp.data.DataStoreRepository
+import com.viditnakhawa.myimageapp.data.DownloadRepository
+import com.viditnakhawa.myimageapp.data.GEMMA_E2B_MODEL
+import com.viditnakhawa.myimageapp.data.Model
+import com.viditnakhawa.myimageapp.data.ModelDownloadStatus
+import com.viditnakhawa.myimageapp.data.ModelDownloadStatusType
+import com.viditnakhawa.myimageapp.data.Task
 import com.viditnakhawa.myimageapp.ui.common.AuthConfig
 import com.viditnakhawa.myimageapp.workers.MultimodalAnalysisWorker
+import dagger.hilt.android.lifecycle.HiltViewModel
+import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -21,7 +31,6 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.suspendCancellableCoroutine
-import kotlin.coroutines.resume
 import net.openid.appauth.AuthorizationException
 import net.openid.appauth.AuthorizationRequest
 import net.openid.appauth.AuthorizationResponse
@@ -30,10 +39,11 @@ import net.openid.appauth.ResponseTypeValues
 import java.io.File
 import java.net.HttpURLConnection
 import java.net.URL
+import javax.inject.Inject
+import kotlin.coroutines.resume
 
 private const val TAG = "ModelManagerViewModel"
 
-// --- Data classes and Enums specific to this ViewModel ---
 data class ModelInitializationStatus(
     val status: ModelInitializationStatusType, var error: String = ""
 )
@@ -60,10 +70,11 @@ data class ModelManagerUiState(
     val selectedModel: Model = GEMMA_E2B_MODEL,
 )
 
-class ModelManagerViewModel(
+@HiltViewModel
+class ModelManagerViewModel @Inject constructor(
     private val downloadRepository: DownloadRepository,
     private val dataStoreRepository: DataStoreRepository,
-    private val context: Context,
+    @ApplicationContext private val context: Context,
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(createEmptyUiState())
@@ -74,6 +85,13 @@ class ModelManagerViewModel(
 
     init {
         loadInitialState()
+        viewModelScope.launch(Dispatchers.IO) {
+            val model = GEMMA_E2B_MODEL
+            val downloadStatus = getModelDownloadStatus(model, context)
+            if (downloadStatus.status == ModelDownloadStatusType.SUCCEEDED && !LlmChatModelHelper.isModelInitialized(model)) {
+                initializeModel(context, model)
+            }
+        }
     }
 
     private fun createEmptyUiState(): ModelManagerUiState {
@@ -121,10 +139,6 @@ class ModelManagerViewModel(
     }
 
     override fun onCleared() {
-        // **THE FIX:** Do NOT clean up the model here. The model instance should
-        // persist for the entire application lifecycle. The OS will reclaim the
-        // memory when the app process is terminated.
-        // LlmChatModelHelper.cleanUp(GEMMA_E2B_MODEL) // <-- REMOVED THIS LINE
         super.onCleared()
         authService.dispose()
     }

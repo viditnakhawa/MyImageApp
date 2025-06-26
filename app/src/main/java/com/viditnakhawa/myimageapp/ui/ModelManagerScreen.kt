@@ -23,12 +23,12 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.core.content.ContextCompat
+import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.viditnakhawa.myimageapp.data.ASK_IMAGE_TASK
 import com.viditnakhawa.myimageapp.data.GEMMA_E2B_MODEL
 import com.viditnakhawa.myimageapp.data.Model
 import com.viditnakhawa.myimageapp.data.Task
-import com.viditnakhawa.myimageapp.ui.common.ViewModelProvider
 import com.viditnakhawa.myimageapp.ui.common.modelitem.ModelItem
 import com.viditnakhawa.myimageapp.ui.modelmanager.ModelManagerViewModel
 import com.viditnakhawa.myimageapp.ui.modelmanager.TokenRequestResultType
@@ -41,7 +41,7 @@ import java.net.HttpURLConnection
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ModelManagerScreen(onClose: () -> Unit) {
-    val modelManagerViewModel: ModelManagerViewModel = viewModel(factory = ViewModelProvider.Factory)
+    val modelManagerViewModel: ModelManagerViewModel = hiltViewModel()
     val uiState by modelManagerViewModel.uiState.collectAsState()
     val context = LocalContext.current
     val scope = rememberCoroutineScope()

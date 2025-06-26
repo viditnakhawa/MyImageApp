@@ -1,62 +1,62 @@
 package com.viditnakhawa.myimageapp.ui.navigation
 
+//import com.viditnakhawa.myimageapp.ui.LicensesScreen
 import android.net.Uri
-import androidx.compose.runtime.*
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.setValue
+import androidx.core.net.toUri
+import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavHostController
 import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
-import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
+import com.viditnakhawa.myimageapp.ui.ImageViewModel
+import com.viditnakhawa.myimageapp.ui.ModelManagerScreen
+import com.viditnakhawa.myimageapp.ui.SettingsScreen
 import com.viditnakhawa.myimageapp.ui.analysis.AnalysisContainerScreen
 import com.viditnakhawa.myimageapp.ui.camera.CameraScreen
+import com.viditnakhawa.myimageapp.ui.collections.AddToCollectionDialog
+import com.viditnakhawa.myimageapp.ui.collections.CollectionDetailScreen
 import com.viditnakhawa.myimageapp.ui.collections.CollectionsScreen
 import com.viditnakhawa.myimageapp.ui.collections.CreateCollectionDialog
 import com.viditnakhawa.myimageapp.ui.collections.SelectScreenshotsScreen
-import com.viditnakhawa.myimageapp.ui.common.ViewModelProvider
 import com.viditnakhawa.myimageapp.ui.gallery.GalleryScreen
 import com.viditnakhawa.myimageapp.ui.modelmanager.ModelManagerViewModel
-import com.viditnakhawa.myimageapp.ui.viewer.FullScreenViewerScreen
-import com.viditnakhawa.myimageapp.ui.ImageViewModel
-import com.viditnakhawa.myimageapp.ui.ModelManagerScreen
-import kotlinx.coroutines.launch
-import androidx.core.net.toUri
-import com.viditnakhawa.myimageapp.ui.collections.AddToCollectionDialog
-//import com.viditnakhawa.myimageapp.ui.LicensesScreen
-import com.viditnakhawa.myimageapp.ui.SettingsScreen
-import com.viditnakhawa.myimageapp.ui.collections.CollectionDetailScreen
 import com.viditnakhawa.myimageapp.ui.navigation.AppRoutes.COLLECTION_DETAIL
 import com.viditnakhawa.myimageapp.ui.navigation.AppRoutes.COLLECTION_ID_ARG
+import com.viditnakhawa.myimageapp.ui.viewer.FullScreenViewerScreen
+import kotlinx.coroutines.launch
 
 @Composable
-fun AppNavigation() {
-    val navController: NavHostController = rememberNavController()
-    val imageViewModel: ImageViewModel = viewModel(factory = ViewModelProvider.Factory)
-    val modelManagerViewModel: ModelManagerViewModel = viewModel(factory = ViewModelProvider.Factory)
+fun AppNavigation(navController: NavHostController) {
     val scope = rememberCoroutineScope()
     var showCreateCollectionDialog by remember { mutableStateOf(false) }
     var imageUriToAddToCollection by remember { mutableStateOf<Uri?>(null) }
-    val collections by imageViewModel.collections.collectAsStateWithLifecycle(emptyList())
 
     if (imageUriToAddToCollection != null) {
+        val imageViewModel: ImageViewModel = hiltViewModel()
+        val collections by imageViewModel.collections.collectAsStateWithLifecycle(emptyList())
         AddToCollectionDialog(
             collections = collections,
             onDismiss = { imageUriToAddToCollection = null },
             onCollectionSelected = { collectionId ->
                 imageViewModel.addImageToCollection(imageUriToAddToCollection.toString(), collectionId)
-                // You can add a Toast here for confirmation
                 imageUriToAddToCollection = null // Dismiss dialog after adding
             },
             onCreateCollection = { collectionName ->
-                // This uses the existing create collection function from the ViewModel
                 imageViewModel.createCollection(collectionName)
             }
         )
     }
 
     if (showCreateCollectionDialog) {
+        val imageViewModel: ImageViewModel = hiltViewModel()
         CreateCollectionDialog(
             onDismissRequest = { showCreateCollectionDialog = false },
             onCreateClicked = { collectionName ->
@@ -71,6 +71,8 @@ fun AppNavigation() {
 
     NavHost(navController = navController, startDestination = AppRoutes.GALLERY) {
         composable(AppRoutes.GALLERY) {
+            val imageViewModel: ImageViewModel = hiltViewModel()
+            val modelManagerViewModel: ModelManagerViewModel = hiltViewModel()
             GalleryScreen(
                 imageViewModel = imageViewModel,
                 modelManagerViewModel = modelManagerViewModel,
@@ -97,6 +99,8 @@ fun AppNavigation() {
             arguments = listOf(navArgument(AppRoutes.URI_ARG) { type = NavType.StringType })
         ) { backStackEntry ->
             val uriString = Uri.decode(backStackEntry.arguments?.getString(AppRoutes.URI_ARG))
+            val imageViewModel: ImageViewModel = hiltViewModel()
+            val modelManagerViewModel: ModelManagerViewModel = hiltViewModel()
             AnalysisContainerScreen(
                 imageUri = uriString.toUri(),
                 imageViewModel = imageViewModel,
@@ -121,6 +125,7 @@ fun AppNavigation() {
             route = AppRoutes.SELECT_SCREENSHOTS_ROUTE,
             arguments = listOf(navArgument(COLLECTION_ID_ARG) { type = NavType.LongType })
         ) { backStackEntry ->
+            val imageViewModel: ImageViewModel = hiltViewModel()
             val collectionId = backStackEntry.arguments?.getLong(COLLECTION_ID_ARG) ?: return@composable
             val allImages by imageViewModel.images.collectAsStateWithLifecycle()
             SelectScreenshotsScreen(
@@ -136,6 +141,7 @@ fun AppNavigation() {
         }
 
         composable(AppRoutes.CAMERA) {
+            val imageViewModel: ImageViewModel = hiltViewModel()
             CameraScreen(
                 onImageCaptured = { uri ->
                     imageViewModel.addImage(uri)
@@ -161,6 +167,7 @@ fun AppNavigation() {
         }
 
         composable(AppRoutes.COLLECTIONS) {
+            val imageViewModel: ImageViewModel = hiltViewModel()
             val collections by imageViewModel.collectionsWithImages.collectAsStateWithLifecycle()
             CollectionsScreen(
                 collections = collections,
@@ -175,6 +182,8 @@ fun AppNavigation() {
             route = "$COLLECTION_DETAIL/{$COLLECTION_ID_ARG}",
             arguments = listOf(navArgument(COLLECTION_ID_ARG) { type = NavType.LongType })
         ) { backStackEntry ->
+            val imageViewModel: ImageViewModel = hiltViewModel()
+            val modelManagerViewModel: ModelManagerViewModel = hiltViewModel()
             val collectionId = backStackEntry.arguments?.getLong(COLLECTION_ID_ARG) ?: return@composable
             CollectionDetailScreen(
                 navController = navController,
