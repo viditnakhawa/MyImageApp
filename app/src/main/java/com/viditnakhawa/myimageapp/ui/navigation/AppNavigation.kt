@@ -16,8 +16,8 @@ import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.navArgument
-import com.viditnakhawa.myimageapp.ui.ImageViewModel
 import com.viditnakhawa.myimageapp.ui.ModelManagerScreen
+import com.viditnakhawa.myimageapp.ui.OnboardingScreen
 import com.viditnakhawa.myimageapp.ui.SettingsScreen
 import com.viditnakhawa.myimageapp.ui.analysis.AnalysisContainerScreen
 import com.viditnakhawa.myimageapp.ui.camera.CameraScreen
@@ -27,14 +27,17 @@ import com.viditnakhawa.myimageapp.ui.collections.CollectionsScreen
 import com.viditnakhawa.myimageapp.ui.collections.CreateCollectionDialog
 import com.viditnakhawa.myimageapp.ui.collections.SelectScreenshotsScreen
 import com.viditnakhawa.myimageapp.ui.gallery.GalleryScreen
-import com.viditnakhawa.myimageapp.ui.modelmanager.ModelManagerViewModel
 import com.viditnakhawa.myimageapp.ui.navigation.AppRoutes.COLLECTION_DETAIL
 import com.viditnakhawa.myimageapp.ui.navigation.AppRoutes.COLLECTION_ID_ARG
 import com.viditnakhawa.myimageapp.ui.viewer.FullScreenViewerScreen
+import com.viditnakhawa.myimageapp.ui.viewmodels.ImageViewModel
+import com.viditnakhawa.myimageapp.ui.viewmodels.MainViewModel
+import com.viditnakhawa.myimageapp.ui.viewmodels.ModelManagerViewModel
 import kotlinx.coroutines.launch
 
 @Composable
-fun AppNavigation(navController: NavHostController) {
+fun AppNavigation(navController: NavHostController, startDestination: String) {
+    val mainViewModel: MainViewModel = hiltViewModel()
     val scope = rememberCoroutineScope()
     var showCreateCollectionDialog by remember { mutableStateOf(false) }
     var imageUriToAddToCollection by remember { mutableStateOf<Uri?>(null) }
@@ -69,7 +72,19 @@ fun AppNavigation(navController: NavHostController) {
         )
     }
 
-    NavHost(navController = navController, startDestination = AppRoutes.GALLERY) {
+    NavHost(navController = navController, startDestination = startDestination) {
+        composable(AppRoutes.ONBOARDING) {
+            OnboardingScreen(
+                onOnboardingComplete = {
+                    mainViewModel.setOnboardingCompleted()
+                    navController.navigate(AppRoutes.GALLERY) {
+                        popUpTo(AppRoutes.ONBOARDING) { inclusive = true }
+                    }
+                },
+                onBack = { navController.popBackStack() }
+            )
+        }
+
         composable(AppRoutes.GALLERY) {
             val imageViewModel: ImageViewModel = hiltViewModel()
             val modelManagerViewModel: ModelManagerViewModel = hiltViewModel()

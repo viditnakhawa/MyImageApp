@@ -2,13 +2,13 @@ package com.viditnakhawa.myimageapp.ui.navigation
 
 object AppRoutes {
     // Base routes
+    const val ONBOARDING = "onboarding"
     const val GALLERY = "gallery"
     const val COLLECTIONS = "collections"
     const val MODEL_MANAGER = "model_manager"
     const val CAMERA = "camera"
     const val SETTINGS = "settings"
     const val LICENSES = "licenses"
-
 
     // Argument keys
     const val URI_ARG = "uri"

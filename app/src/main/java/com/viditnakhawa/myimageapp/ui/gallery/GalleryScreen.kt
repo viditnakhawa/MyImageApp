@@ -6,14 +6,13 @@ import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.PickVisualMediaRequest
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.platform.LocalContext
 import androidx.core.net.toUri
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import com.viditnakhawa.myimageapp.ui.ImageViewModel
+import com.viditnakhawa.myimageapp.ui.viewmodels.ImageViewModel
 import com.viditnakhawa.myimageapp.ui.ScreenshotsGalleryScreenWithFAB
-import com.viditnakhawa.myimageapp.ui.modelmanager.ModelManagerViewModel
+import com.viditnakhawa.myimageapp.ui.viewmodels.ModelManagerViewModel
 
 @Composable
 fun GalleryScreen(

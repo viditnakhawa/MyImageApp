@@ -7,19 +7,25 @@ import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
+import androidx.activity.viewModels
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.core.content.ContextCompat
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.compose.rememberNavController
 import com.viditnakhawa.myimageapp.ui.PermissionsScreen
 import com.viditnakhawa.myimageapp.ui.navigation.AppNavigation
+import com.viditnakhawa.myimageapp.ui.navigation.AppRoutes
 import com.viditnakhawa.myimageapp.ui.theme.MyImageAppTheme
+import com.viditnakhawa.myimageapp.ui.viewmodels.MainViewModel
 import dagger.hilt.android.AndroidEntryPoint
 
 @AndroidEntryPoint
 class MainActivity : ComponentActivity() {
+
+    private val mainViewModel: MainViewModel by viewModels()
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -28,10 +34,13 @@ class MainActivity : ComponentActivity() {
 
         setContent {
             MyImageAppTheme {
+                val hasCompletedOnboarding by mainViewModel.hasCompletedOnboarding.collectAsStateWithLifecycle()
                 var permissionsGranted by remember { mutableStateOf(checkAllPermissions()) }
+
                 if (permissionsGranted) {
                     val navController = rememberNavController()
-                    AppNavigation(navController = navController)
+                    val startDestination = if (hasCompletedOnboarding) AppRoutes.GALLERY else AppRoutes.ONBOARDING
+                    AppNavigation(navController = navController, startDestination = startDestination)
                 } else {
                     PermissionsScreen(onPermissionsGranted = { permissionsGranted = true })
                 }
