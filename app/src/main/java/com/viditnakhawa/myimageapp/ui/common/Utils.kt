@@ -1,22 +1,13 @@
 package com.viditnakhawa.myimageapp.ui.common
 
 
-import android.Manifest
 import android.content.Context
-import android.content.pm.PackageManager
-import android.os.Build
-import android.util.Log
-import androidx.activity.compose.ManagedActivityResultLauncher
-import androidx.activity.result.ActivityResultLauncher
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.graphics.Color
-import androidx.core.content.ContextCompat
 import com.google.gson.Gson
 import com.google.gson.reflect.TypeToken
-import com.viditnakhawa.myimageapp.data.Model
 import com.viditnakhawa.myimageapp.data.Task
-import com.viditnakhawa.myimageapp.ui.modelmanager.ModelManagerViewModel
 import java.io.File
 import kotlin.math.ln
 import kotlin.math.pow
@@ -58,27 +49,6 @@ fun getTaskBgColor(task: Task): Color {
 @Composable
 fun getTaskIconColor(task: Task): Color {
     return MaterialTheme.colorScheme.primary
-}
-
-fun checkNotificationPermissionAndStartDownload(
-    context: Context,
-    launcher: ActivityResultLauncher<String>,
-    modelManagerViewModel: ModelManagerViewModel,
-    task: Task,
-    model: Model
-) {
-    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-        val permission = Manifest.permission.POST_NOTIFICATIONS
-        if (ContextCompat.checkSelfPermission(context, permission) == PackageManager.PERMISSION_GRANTED) {
-            // ✅ Start download immediately
-            modelManagerViewModel.downloadModel(task = task, model = model)
-        } else {
-            launcher.launch(permission)
-        }
-    } else {
-        // ✅ No permission needed, start download directly
-        modelManagerViewModel.downloadModel(task = task, model = model)
-    }
 }
 
 data class LaunchInfo(

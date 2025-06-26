@@ -1,7 +1,7 @@
 package com.viditnakhawa.myimageapp.ui.common.modelitem
 
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.rounded.Cancel
+import androidx.compose.material.icons.rounded.Close
 import androidx.compose.material.icons.rounded.Pause
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -9,36 +9,6 @@ import androidx.compose.runtime.Composable
 import com.viditnakhawa.myimageapp.data.ModelDownloadStatus
 import com.viditnakhawa.myimageapp.data.ModelDownloadStatusType
 
-
-/*@Composable
-fun ModelItemActionButton(
-    context: Context,
-    model: Model,
-    task: Task,
-    modelManagerViewModel: ModelManagerViewModel,
-    downloadStatus: ModelDownloadStatus?,
-    onDownloadClicked: (Model) -> Unit,
-) {
-    when (downloadStatus?.status) {
-        ModelDownloadStatusType.NOT_DOWNLOADED, ModelDownloadStatusType.FAILED ->
-            DownloadAndTryButton(
-                task = task,
-                model = model,
-                enabled = true,
-                needToDownloadFirst = true,
-                modelManagerViewModel = modelManagerViewModel,
-                onClicked = { onDownloadClicked(model) }
-            )
-
-        ModelDownloadStatusType.IN_PROGRESS -> IconButton(onClick = {
-            // TODO: Implement cancel logic in ViewModel and Repository
-            modelManagerViewModel.cancelDownload(model)
-        }) {
-            Icon(Icons.Rounded.Cancel, contentDescription = "Cancel")
-        }
-        else -> {}
-    }
-}*/
 
 @Composable
 fun ModelItemActionButton(
@@ -51,8 +21,12 @@ fun ModelItemActionButton(
         IconButton(onClick = onCancelClicked) {
             Icon(Icons.Rounded.Pause, contentDescription = "Pause")
         }
+    }
+    if (downloadStatus?.status == ModelDownloadStatusType.IN_PROGRESS ||
+        downloadStatus?.status == ModelDownloadStatusType.SUCCEEDED
+    ) {
         IconButton(onClick = onDeleteClicked) {
-            Icon(Icons.Rounded.Cancel, contentDescription = "Delete")
+            Icon(Icons.Rounded.Close, contentDescription = "Delete")
         }
     }
 }

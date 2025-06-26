@@ -1,14 +1,20 @@
 package com.viditnakhawa.myimageapp.ui.common.modelitem
 
-import androidx.compose.foundation.layout.*
-import androidx.compose.material3.*
-import androidx.compose.runtime.*
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
+import androidx.compose.material3.LinearProgressIndicator
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Text
+import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.viditnakhawa.myimageapp.data.Model
 import com.viditnakhawa.myimageapp.data.ModelDownloadStatus
 import com.viditnakhawa.myimageapp.data.ModelDownloadStatusType
+import com.viditnakhawa.myimageapp.ui.common.formatToHourMinSecond
 import com.viditnakhawa.myimageapp.ui.common.humanReadableSize
 
 @Composable
@@ -36,10 +42,17 @@ fun ModelNameAndStatus(
         } else {
             var statusLabel = model.totalBytes.humanReadableSize()
             if (inProgress) {
-                val totalSize = downloadStatus?.totalBytes ?: model.totalBytes
-                val received = downloadStatus?.receivedBytes ?: 0
+                val totalSize = downloadStatus.totalBytes
+                val received = downloadStatus.receivedBytes
+                val remainingTime = downloadStatus.remainingMs.formatToHourMinSecond()
+
                 statusLabel = "${received.humanReadableSize()} / ${totalSize.humanReadableSize()}"
+
+                if (remainingTime.isNotBlank() && downloadStatus.bytesPerSecond > 0) {
+                    statusLabel += " - $remainingTime remaining"
+                }
             }
+
             Text(
                 statusLabel,
                 color = MaterialTheme.colorScheme.secondary,
@@ -54,9 +67,12 @@ fun ModelNameAndStatus(
 
         LinearProgressIndicator(
             progress = { safeProgress },
-            modifier = Modifier.padding(top = 4.dp),
-            color = MaterialTheme.colorScheme.primary, // The color of the progress bar itself
-            trackColor = MaterialTheme.colorScheme.surfaceVariant, // The color of the bar's background
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(16.dp)
+                .padding(top = 8.dp),
+            color = MaterialTheme.colorScheme.primary.copy(alpha = 0.85f),
+            trackColor = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 1.0f),
         )
     }
 }

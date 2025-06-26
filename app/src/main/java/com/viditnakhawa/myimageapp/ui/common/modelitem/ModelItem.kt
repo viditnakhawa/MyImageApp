@@ -1,26 +1,41 @@
 package com.viditnakhawa.myimageapp.ui.common.modelitem
 
 import android.content.Intent
-import android.net.Uri
-import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowForward
-import androidx.compose.material3.*
+import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.Icon
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import androidx.core.net.toUri
 import com.viditnakhawa.myimageapp.data.Model
 import com.viditnakhawa.myimageapp.data.ModelDownloadStatus
 import com.viditnakhawa.myimageapp.data.ModelDownloadStatusType
 import com.viditnakhawa.myimageapp.data.Task
 import com.viditnakhawa.myimageapp.ui.common.TaskIcon
-import com.viditnakhawa.myimageapp.ui.common.humanReadableSize
-import com.viditnakhawa.myimageapp.ui.modelmanager.ModelInitializationStatus
-import com.viditnakhawa.myimageapp.ui.modelmanager.ModelInitializationStatusType
+import com.viditnakhawa.myimageapp.ui.viewmodels.ModelInitializationStatus
+import com.viditnakhawa.myimageapp.ui.viewmodels.ModelInitializationStatusType
 
 @Composable
 fun ModelItem(
@@ -55,11 +70,9 @@ fun ModelItem(
                 horizontalArrangement = Arrangement.spacedBy(16.dp)
             ) {
                 TaskIcon(task = task, modifier = Modifier.size(40.dp))
-                Text(
-                    text = model.name,
-                    style = MaterialTheme.typography.titleLarge,
-                    modifier = Modifier.weight(1f)
-                )
+
+                ModelNameAndStatus(model = model, downloadStatus = downloadStatus, modifier = Modifier.weight(1f))
+
                 ModelItemActionButton(
                     downloadStatus = downloadStatus,
                     onCancelClicked = onCancelClicked,
@@ -79,10 +92,6 @@ fun ModelItem(
 
             Spacer(modifier = Modifier.height(16.dp))
 
-            if (downloadStatus?.status != ModelDownloadStatusType.NOT_DOWNLOADED) {
-                ModelProgress(downloadStatus = downloadStatus, model = model)
-            }
-
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -91,7 +100,7 @@ fun ModelItem(
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 TextButton(onClick = {
-                    val intent = Intent(Intent.ACTION_VIEW, Uri.parse(model.learnMoreUrl))
+                    val intent = Intent(Intent.ACTION_VIEW, model.learnMoreUrl.toUri())
                     context.startActivity(intent)
                 }) {
                     Text("Learn More")
@@ -126,47 +135,5 @@ fun ModelItem(
                 }
             }
         }
-    }
-}
-
-@Composable
-private fun ModelProgress(downloadStatus: ModelDownloadStatus?, model: Model) {
-    val inProgress = downloadStatus?.status == ModelDownloadStatusType.IN_PROGRESS
-    Column {
-        if (downloadStatus?.status == ModelDownloadStatusType.FAILED) {
-            Text(
-                downloadStatus.errorMessage,
-                color = MaterialTheme.colorScheme.error,
-                style = MaterialTheme.typography.labelMedium,
-            )
-        } else {
-            val statusLabel = if (inProgress) {
-                val totalSize = downloadStatus?.totalBytes ?: model.totalBytes
-                val received = downloadStatus?.receivedBytes ?: 0
-                "${received.humanReadableSize()} / ${totalSize.humanReadableSize()}"
-            } else {
-                model.totalBytes.humanReadableSize()
-            }
-            Text(
-                statusLabel,
-                color = MaterialTheme.colorScheme.secondary,
-                style = MaterialTheme.typography.labelSmall
-            )
-        }
-
-        val safeProgress = when {
-            downloadStatus == null || downloadStatus.totalBytes == 0L -> 0f
-            else -> (downloadStatus.receivedBytes.toFloat() / downloadStatus.totalBytes.toFloat()).coerceIn(0f, 1f)
-        }
-
-        LinearProgressIndicator(
-            progress = { safeProgress },
-            modifier = Modifier
-                .fillMaxWidth()
-                .height(16.dp)
-                .padding(top = 8.dp),
-            color = MaterialTheme.colorScheme.primary.copy(alpha = 0.85f),
-            trackColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 1.0f),
-        )
     }
 }
