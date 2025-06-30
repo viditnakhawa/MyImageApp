@@ -1,7 +1,6 @@
 package com.viditnakhawa.myimageapp.ui.gallery
 
 import android.content.Intent
-import android.net.Uri
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.PickVisualMediaRequest
 import androidx.activity.result.contract.ActivityResultContracts
@@ -10,23 +9,21 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.platform.LocalContext
 import androidx.core.net.toUri
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import com.viditnakhawa.myimageapp.ui.viewmodels.ImageViewModel
 import com.viditnakhawa.myimageapp.ui.ScreenshotsGalleryScreenWithFAB
+import com.viditnakhawa.myimageapp.ui.viewmodels.ImageViewModel
 import com.viditnakhawa.myimageapp.ui.viewmodels.ModelManagerViewModel
 
 @Composable
 fun GalleryScreen(
     imageViewModel: ImageViewModel,
     modelManagerViewModel: ModelManagerViewModel,
-    onNavigateToAnalysis: (Uri) -> Unit,
+    onNavigateToAnalysis: (Int) -> Unit,
     onNavigateToCollections: () -> Unit,
     onCreateCollection: () -> Unit,
     onNavigateToSettings: () -> Unit,
     onNavigateToCamera: () -> Unit,
 ) {
-    //val imageEntities by imageViewModel.allImages.collectAsStateWithLifecycle(initialValue = emptyList())
     val imageEntities by imageViewModel.searchedImages.collectAsStateWithLifecycle()
-    //val imageList by imageViewModel.images.collectAsStateWithLifecycle()
     val searchQuery by imageViewModel.searchQuery.collectAsStateWithLifecycle()
     val context = LocalContext.current
 
@@ -53,9 +50,12 @@ fun GalleryScreen(
         onViewCollectionsClick = onNavigateToCollections,
         onCreateCollectionClick = onCreateCollection,
         onImageClick = { imageEntity ->
-            val uri = imageEntity.imageUri.toUri()
-            imageViewModel.prepareForAnalysis(uri, modelManagerViewModel.isGemmaInitialized())
-            onNavigateToAnalysis(uri)
+            val index = imageEntities.indexOf(imageEntity)
+            if (index != -1) {
+                val uri = imageEntity.imageUri.toUri()
+                imageViewModel.prepareForAnalysis(uri, modelManagerViewModel.isGemmaInitialized())
+                onNavigateToAnalysis(index)
+            }
         },
         onCapturePhotoClick = onNavigateToCamera,
         onPickFromGalleryClick = { pickMediaLauncher.launch(PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly)) },

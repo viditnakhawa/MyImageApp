@@ -92,8 +92,8 @@ fun AppNavigation(navController: NavHostController, startDestination: String) {
                 imageViewModel = imageViewModel,
                 modelManagerViewModel = modelManagerViewModel,
                 onCreateCollection = { showCreateCollectionDialog = true },
-                onNavigateToAnalysis = { uri ->
-                    navController.navigate(AppRoutes.analysisScreen(Uri.encode(uri.toString())))
+                onNavigateToAnalysis = { index ->
+                    navController.navigate(AppRoutes.analysisScreen(index))
                 },
                 onNavigateToCollections = { navController.navigate(AppRoutes.COLLECTIONS) },
                 onNavigateToSettings = { navController.navigate(AppRoutes.SETTINGS) },
@@ -111,13 +111,13 @@ fun AppNavigation(navController: NavHostController, startDestination: String) {
 
         composable(
             route = AppRoutes.ANALYSIS_ROUTE,
-            arguments = listOf(navArgument(AppRoutes.URI_ARG) { type = NavType.StringType })
+            arguments = listOf(navArgument(AppRoutes.INITIAL_PAGE_ARG) { type = NavType.IntType })
         ) { backStackEntry ->
-            val uriString = Uri.decode(backStackEntry.arguments?.getString(AppRoutes.URI_ARG))
+            val initialPage = backStackEntry.arguments?.getInt(AppRoutes.INITIAL_PAGE_ARG) ?: 0
             val imageViewModel: ImageViewModel = hiltViewModel()
             val modelManagerViewModel: ModelManagerViewModel = hiltViewModel()
             AnalysisContainerScreen(
-                imageUri = uriString.toUri(),
+                initialPage = initialPage,
                 imageViewModel = imageViewModel,
                 modelManagerViewModel = modelManagerViewModel,
                 navController = navController,
