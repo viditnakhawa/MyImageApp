@@ -16,6 +16,7 @@ import com.viditnakhawa.myimageapp.data.ImageRepository
 import com.viditnakhawa.myimageapp.data.StructuredAnalysis
 import dagger.assisted.Assisted
 import dagger.assisted.AssistedInject
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.suspendCancellableCoroutine
 import kotlin.coroutines.resume
 
@@ -23,7 +24,7 @@ private const val TAG = "MultimodalAnalysisWorker"
 
 @HiltWorker
 class MultimodalAnalysisWorker @AssistedInject constructor(
-    @Assisted appContext: Context,
+    @Assisted private val appContext: Context,
     @Assisted workerParams: WorkerParameters,
     private val repository: ImageRepository
 ) : CoroutineWorker(appContext, workerParams) {
@@ -33,16 +34,31 @@ class MultimodalAnalysisWorker @AssistedInject constructor(
         val imageUri = imageUriString.toUri()
 
         try {
+            if (!LlmChatModelHelper.isModelInitialized(GEMMA_E2B_MODEL)) {
+                Log.d(TAG, "Model is not initialized. Initializing now...")
+                var initializationError = ""
+                LlmChatModelHelper.initialize(appContext, GEMMA_E2B_MODEL) { error ->
+                    if (error.isNotEmpty()) {
+                        initializationError = error
+                    }
+                }
+                // If initialization failed, stop the worker.
+                if (initializationError.isNotEmpty()) {
+                    Log.e(TAG, "Model initialization failed in worker: $initializationError")
+                    return Result.failure()
+                }
+                Log.d(TAG, "Model initialized successfully in worker.")
+            }
+
             LlmChatModelHelper.resetSession(GEMMA_E2B_MODEL)
-            val bitmap = uriToBitmap(applicationContext, imageUri)
-                ?: return Result.failure()
+            val bitmap = uriToBitmap(applicationContext, imageUri) ?: return Result.failure()
 
             // The prompt now directly asks Gemma to analyze the image content
             val prompt = createGemmaPrompt()
-
             val fullResponse = analyzeImageWithGemma(prompt, bitmap)
-            val analysis = parseGemmaResponse(fullResponse)
+            delay(250)
 
+            val analysis = parseGemmaResponse(fullResponse)
             if (analysis != null) {
                 val imageEntity = repository.getImageDetails(imageUri) ?: ImageEntity(imageUri = imageUriString)
                 val updatedEntity = imageEntity.copy(
@@ -56,10 +72,35 @@ class MultimodalAnalysisWorker @AssistedInject constructor(
                 return Result.success()
             } else {
                 Log.e(TAG, "Failed to parse Gemma's JSON response for: $imageUriString")
+                Log.e(TAG, "Raw model output was: $fullResponse")
+
+                val failedEntity = repository.getImageDetails(imageUri) ?: ImageEntity(imageUri = imageUriString)
+                val updatedFailedEntity = failedEntity.copy(
+                    title = "Analysis Failed",
+                    content = "The model returned an invalid response. Please try re-analyzing from the image details screen later."
+                )
+                repository.updateImageDetails(updatedFailedEntity)
                 return Result.failure()
             }
         } catch (e: Exception) {
             Log.e(TAG, "Error in MultimodalAnalysisWorker for: $imageUriString", e)
+
+            val failedAnalysis = StructuredAnalysis(
+                title = "Analysis Failed",
+                summary = "Could not analyze this image. The model may be busy or an unexpected error occurred. Please try again later.",
+                sourceApp = "System",
+                tags = listOf("Error"),
+                formattedOcr = null
+            )
+
+            val imageEntity = repository.getImageDetails(imageUri) ?: ImageEntity(imageUri = imageUriString)
+            val updatedEntity = imageEntity.copy(
+                title = failedAnalysis.title,
+                content = failedAnalysis.summary,
+                sourceApp = failedAnalysis.sourceApp,
+                tags = failedAnalysis.tags
+            )
+            repository.updateImageDetails(updatedEntity)
             return Result.failure()
         }
     }
@@ -67,23 +108,25 @@ class MultimodalAnalysisWorker @AssistedInject constructor(
     private fun createGemmaPrompt(): String {
         // This prompt expects the model to do all the work from the image alone.
         return """
-        SYSTEM_TASK:
-        You are an expert-level screenshot data extraction agent. Your goal is to identify key entities and structured information from the provided image. Respond ONLY with a valid, structured JSON object based on the schema.
+        SYSTEM_TASK:Add commentMore actions
+        You are an expert-level screenshot classification and summarization agent. Your task is to analyze the provided image and respond ONLY with a valid, structured JSON object.
 
         INSTRUCTIONS:
-        1.  **Identify Core Entity:** Determine the main subject (e.g., Social Media Post, Weather Forecast, News Article).
-        2.  **Create Factual Title:** Write a short, factual title describing the subject.
-        3.  **Extract Key Details:** Pull out all relevant data points. Format these as a bulleted list within a single string for the 'details' field. Do not write a narrative summary.
-        4.  **Generate Keywords:** Create a list of 3-5 relevant tags.
-
+        1.  **Analyze Image:** Examine the visual elements and any text in the screenshot.
+        2.  **Determine Source App:** Identify the application where the screenshot was taken (e.g., "Twitter", "Gmail", "Instagram", "Unknown").
+        3.  **Create Title:** Write a very short, descriptive title (max 10 words).
+        4.  **Create Summary:** Write a brief, three or four-sentence summary of the main content.
+        5.  **Extract Tags:** List 3 to 5 relevant keywords as an array of strings.
+        
         JSON_SCHEMA:
         {
           "title": "string",
+          "summary": "string",
           "sourceApp": "string",
-          "details": "string",
+
           "tags": ["string"]
         }
-        Analyze the provided image and generate the JSON response now.
+        
 
         RESPONSE:
         """.trimIndent()
@@ -94,6 +137,7 @@ class MultimodalAnalysisWorker @AssistedInject constructor(
         return try {
             Gson().fromJson(jsonString, StructuredAnalysis::class.java)
         } catch (e: JsonSyntaxException) {
+            Log.e(TAG, "JSON parsing failed: ${e.localizedMessage}")
             null
         }
     }
@@ -107,8 +151,8 @@ class MultimodalAnalysisWorker @AssistedInject constructor(
                 images = listOf(image),
                 resultListener = { partialResult, done ->
                     fullResponse += partialResult
-                    if (done) {
-                        if (continuation.isActive) continuation.resume(fullResponse)
+                    if (done && continuation.isActive) {
+                        continuation.resume(fullResponse)
                     }
                 },
                 cleanUpListener = {
