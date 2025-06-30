@@ -2,6 +2,7 @@
     <string name="app_name">SnapSuite</string>
     <string name="model_manager">Model Manager</string>
     <string name="downloaded_size">%1$s downloaded</string>
+    <string name="download">Download</string>
     <string name="cancel">Cancel</string>
     <string name="ok">OK</string>
     <string name="confirm_delete_model_dialog_title">Delete download</string>
