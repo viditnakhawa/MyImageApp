@@ -48,7 +48,7 @@ SnapSuite is built using the latest in Android development, following best pract
 
 ### ✅ Requirements
 
-- Android 8.0 (API 26) or higher
+- Android 12.0 (API 31) or higher
 
 ### 📦 Installation
 
@@ -75,4 +75,3 @@ All with **zero cloud dependency**.
 ## 📅 Last Updated
 
 **June 27, 2025**
-"""
