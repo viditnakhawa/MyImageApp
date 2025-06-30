@@ -65,10 +65,10 @@ import androidx.navigation.NavController
 import coil.compose.AsyncImage
 import coil.request.ImageRequest
 import com.viditnakhawa.myimageapp.data.ImageEntity
-import com.viditnakhawa.myimageapp.ui.viewmodels.ImageViewModel
 import com.viditnakhawa.myimageapp.ui.gallery.GalleryImageCard
-import com.viditnakhawa.myimageapp.ui.viewmodels.ModelManagerViewModel
 import com.viditnakhawa.myimageapp.ui.navigation.AppRoutes
+import com.viditnakhawa.myimageapp.ui.viewmodels.ImageViewModel
+import com.viditnakhawa.myimageapp.ui.viewmodels.ModelManagerViewModel
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
@@ -199,18 +199,22 @@ fun CollectionDetailScreen(
                     horizontalArrangement = Arrangement.spacedBy(4.dp)
                 ) {
                     items(it.images, key = { image -> image.imageUri }) { image ->
+                        val currentImageUri = image.imageUri.toUri()
                         val isSelected = selectedImageUris.contains(image.imageUri.toUri())
-                        val onItemClickAction = { clickedImage: ImageEntity ->
+
+                        val onItemClickAction = {
                             if (isSelectionMode) {
-                                val uri = clickedImage.imageUri.toUri()
                                 selectedImageUris = if (isSelected) {
-                                    selectedImageUris - uri
+                                    selectedImageUris - currentImageUri
                                 } else {
-                                    selectedImageUris + uri
+                                    selectedImageUris + currentImageUri
                                 }
                             } else {
-                                imageViewModel.prepareForAnalysis(clickedImage.imageUri.toUri(), modelManagerViewModel.isGemmaInitialized())
-                                navController.navigate(AppRoutes.analysisScreen(Uri.encode(clickedImage.imageUri)))
+                                val galleryIndex = imageViewModel.searchedImages.value.indexOf(image)
+                                if (galleryIndex != -1) {
+                                    imageViewModel.prepareForAnalysis(currentImageUri, modelManagerViewModel.isGemmaInitialized())
+                                    navController.navigate(AppRoutes.analysisScreen(galleryIndex))
+                                }
                             }
                         }
 
@@ -219,14 +223,14 @@ fun CollectionDetailScreen(
                                 image = image,
                                 modifier = Modifier
                                     .aspectRatio(1f)
-                                    .clickable { onItemClickAction(image) }
+                                    .clickable { onItemClickAction() }
                             )
                         } else {
                             GridItem(
                                 image = image,
                                 isSelected = isSelected,
                                 isSelectionMode = isSelectionMode,
-                                onItemClick = onItemClickAction
+                                onItemClick = { onItemClickAction() }
                             )
                         }
                     }
