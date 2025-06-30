@@ -41,7 +41,7 @@ interface ImageDao {
     @Query("SELECT * FROM images WHERE sourceApp IS NULL")
     suspend fun getUnanalyzedImages(): List<ImageEntity>
 
-    @Query("SELECT * FROM images WHERE isIgnored = 0 AND (title LIKE :query OR content LIKE :query OR polishedOcr LIKE :query OR tags LIKE :query) ORDER BY lastModified DESC")
+    @Query("SELECT * FROM images WHERE isIgnored = 0 AND (title LIKE :query OR content LIKE :query OR polishedOcr LIKE :query OR tags LIKE :query OR note LIKE :query) ORDER BY lastModified DESC")
     fun searchImages(query: String): Flow<List<ImageEntity>>
 
     @Query("SELECT imageUri FROM images")

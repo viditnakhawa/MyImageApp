@@ -117,7 +117,8 @@ class ImageViewModel @Inject constructor(
                 image.title?.lowercase()?.contains(lowerCaseQuery) == true ||
                         image.content?.lowercase()?.contains(lowerCaseQuery) == true ||
                         image.polishedOcr?.lowercase()?.contains(lowerCaseQuery) == true ||
-                        image.tags?.any { tag -> tag.lowercase().contains(lowerCaseQuery) } == true
+                        image.tags?.any { tag -> tag.lowercase().contains(lowerCaseQuery) } == true ||
+                        image.note?.lowercase()?.contains(lowerCaseQuery) == true
             }
         }
     }.stateIn(
@@ -139,6 +140,12 @@ class ImageViewModel @Inject constructor(
     fun addImageToCollection(imageUri: String, collectionId: Long) {
         viewModelScope.launch(Dispatchers.IO) {
             repository.addImageToCollection(imageUri, collectionId)
+        }
+    }
+
+    fun updateImageNote(uri: Uri, note: String) {
+        viewModelScope.launch {
+            repository.updateImageNote(uri, note)
         }
     }
 
@@ -226,6 +233,32 @@ class ImageViewModel @Inject constructor(
             val currentDetails = getImageDetails(uri) ?: ImageEntity(uri.toString())
             val updatedDetails = currentDetails.copy(polishedOcr = extractedText)
             updateImageDetails(updatedDetails)
+        }
+    }
+
+    fun forceReanalyzeImage(uri: Uri) {
+        viewModelScope.launch(Dispatchers.IO) {
+            val existingEntity = repository.getImageDetails(uri)
+            if (existingEntity != null) {
+                val pendingEntity = existingEntity.copy(
+                    title = "Analysis in progress...",
+                    content = "",
+                    tags = emptyList()
+                )
+                repository.updateImageDetails(pendingEntity)
+            }
+
+            val workRequest = OneTimeWorkRequestBuilder<MultimodalAnalysisWorker>()
+                .setInputData(workDataOf("IMAGE_URI" to uri.toString()))
+                .build()
+
+
+            WorkManager.getInstance(applicationContext)
+                .enqueueUniqueWork(
+                    "analysis_${uri}",
+                    ExistingWorkPolicy.REPLACE,
+                    workRequest
+                )
         }
     }
 }

@@ -90,6 +90,8 @@ fun AnalysisScreen(
     imageUri: Uri,
     details: PostDetails?,
     isLoading: Boolean,
+    note: String,
+    onSaveNote: (String) -> Unit,
     isOcrRunning: Boolean,
     onClose: () -> Unit,
     onImageClick: (Uri) -> Unit,
@@ -102,7 +104,7 @@ fun AnalysisScreen(
     analysisMessage: String = "Analyzing...",
     isGemmaReady: Boolean
 ) {
-    var noteText by remember { mutableStateOf("") }
+    var noteText by remember(note) { mutableStateOf(note) }
     var isNoteEditable by remember { mutableStateOf(false) }
     var aspectRatio by remember { mutableFloatStateOf(9f / 16f) }
     val context = LocalContext.current
@@ -118,7 +120,7 @@ fun AnalysisScreen(
     LaunchedEffect(imageUri) {
         launch {
             val rawColor = extractDominantColor(context, imageUri)
-            dominantColor = adjustColorBrightness(rawColor, 0.85f) // Darken for better text contrast
+            dominantColor = adjustColorBrightness(rawColor, 0.85f)
         }
     }
 
@@ -229,6 +231,58 @@ fun AnalysisScreen(
                 .verticalScroll(rememberScrollState()),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
+            val imageRequest = ImageRequest.Builder(LocalContext.current)
+                .data(imageUri)
+                .crossfade(true)
+                .listener(onSuccess = { _, result ->
+                    val drawable = result.drawable
+                    val width = drawable.intrinsicWidth
+                    val height = drawable.intrinsicHeight
+                    if (width > 0 && height > 0) {
+                        // Set aspect ratio based on orientation
+                        aspectRatio = if (width > height) {
+                            16f / 9f // Landscape
+                        } else {
+                            9f / 16f // Portrait
+                        }
+                    }
+                })
+                .build()
+
+            Spacer(modifier = Modifier.height(16.dp))
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 16.dp)
+                    .aspectRatio(aspectRatio)
+                    .clip(RoundedCornerShape(24.dp))
+            ) {
+                AsyncImage(
+                    model = imageRequest,
+                    contentDescription = "Analyzed Image",
+                    contentScale = ContentScale.Crop,
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .clickable { onImageClick(imageUri) }
+                )
+                Column(
+                    modifier = Modifier
+                        .align(Alignment.BottomEnd)
+                        .padding(12.dp),
+                    verticalArrangement = Arrangement.spacedBy(12.dp),
+                    horizontalAlignment = Alignment.End
+                ) {
+                    TooltipFab(
+                        icon = Icons.AutoMirrored.Filled.TextSnippet,
+                        label = "OCR",
+                        onClick = { onRecognizeText(imageUri) })
+                    TooltipFab(
+                        icon = Icons.Default.AutoAwesome,
+                        label = "Gemma",
+                        onClick = { onAnalyzeWithGemma(imageUri) })
+                }
+            }
+
             if (isLoading) {
                 Spacer(modifier = Modifier.height(32.dp))
                 Card(
@@ -257,57 +311,7 @@ fun AnalysisScreen(
                     }
                 }
             }  else if (details != null) {
-                val imageRequest = ImageRequest.Builder(LocalContext.current)
-                    .data(imageUri)
-                    .crossfade(true)
-                    .listener(onSuccess = { _, result ->
-                        val drawable = result.drawable
-                        val width = drawable.intrinsicWidth
-                        val height = drawable.intrinsicHeight
-                        if (width > 0 && height > 0) {
-                            // Set aspect ratio based on orientation
-                            aspectRatio = if (width > height) {
-                                16f / 9f // Landscape
-                            } else {
-                                9f / 16f // Portrait
-                            }
-                        }
-                    })
-                    .build()
 
-                Spacer(modifier = Modifier.height(16.dp))
-                Box(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(horizontal = 16.dp)
-                        .aspectRatio(aspectRatio)
-                        .clip(RoundedCornerShape(24.dp))
-                ) {
-                    AsyncImage(
-                        model = imageRequest,
-                        contentDescription = "Analyzed Image",
-                        contentScale = ContentScale.Crop,
-                        modifier = Modifier
-                            .fillMaxSize()
-                            .clickable { onImageClick(imageUri) }
-                    )
-                    Column(
-                        modifier = Modifier
-                            .align(Alignment.BottomEnd)
-                            .padding(12.dp),
-                        verticalArrangement = Arrangement.spacedBy(12.dp),
-                        horizontalAlignment = Alignment.End
-                    ) {
-                        TooltipFab(
-                            icon = Icons.AutoMirrored.Filled.TextSnippet,
-                            label = "OCR",
-                            onClick = { onRecognizeText(imageUri) })
-                        TooltipFab(
-                            icon = Icons.Default.AutoAwesome,
-                            label = "Gemma",
-                            onClick = { onAnalyzeWithGemma(imageUri) })
-                    }
-                }
                 Spacer(modifier = Modifier.height(24.dp))
 
                 if (details.isFallback) {
@@ -353,7 +357,7 @@ fun AnalysisScreen(
                             Spacer(modifier = Modifier.height(16.dp))
                             FlowRow(
                                 horizontalArrangement = Arrangement.spacedBy(8.dp),
-                                verticalArrangement = Arrangement.spacedBy(4.dp) // this will now behave as expected
+                                verticalArrangement = Arrangement.spacedBy(4.dp)
                             ) {
                                 details.tags.forEach { tag ->
                                     CompactChip(tag)
@@ -452,7 +456,10 @@ fun AnalysisScreen(
                                 )
                                 Spacer(modifier = Modifier.width(8.dp))
                                 FilledIconButton(
-                                    onClick = { isNoteEditable = false },
+                                    onClick = {
+                                        onSaveNote(noteText)
+                                        isNoteEditable = false
+                                    },
                                     modifier = Modifier.size(40.dp),
                                     shape = RoundedCornerShape(18.dp),
                                     colors = IconButtonDefaults.filledIconButtonColors(
@@ -468,9 +475,9 @@ fun AnalysisScreen(
                             }
                         } else {
                             Text(
-                                text = if (noteText.isNotBlank()) noteText else "Note",
+                                text = if (noteText.isNotBlank()) noteText else "Add a note...",
                                 style = MaterialTheme.typography.bodyLarge,
-                                modifier = Modifier
+                                modifier = Modifier.defaultMinSize(minHeight = 48.dp)
                             )
                         }
                     }

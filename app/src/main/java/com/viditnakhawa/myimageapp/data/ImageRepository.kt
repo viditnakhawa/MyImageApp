@@ -148,6 +148,18 @@ class ImageRepository(
         imageDao.updateImage(imageDetails)
     }
 
+    suspend fun getUnanalyzedImages(): List<ImageEntity> {
+        return imageDao.getUnanalyzedImages()
+    }
+
+    suspend fun updateImageNote(uri: Uri, note: String) {
+        val image = imageDao.getImageByUri(uri.toString()).firstOrNull()
+        if (image != null) {
+            val updatedImage = image.copy(note = note)
+            imageDao.updateImage(updatedImage)
+        }
+    }
+
     // --- Collection Functions ---
     val collections: Flow<List<CollectionEntity>> = imageDao.getAllCollections()
     val collectionsWithImages: Flow<List<CollectionWithImages>> = imageDao.getCollectionsWithImages()

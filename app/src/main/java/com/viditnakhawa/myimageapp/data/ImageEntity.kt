@@ -20,6 +20,8 @@ data class ImageEntity(
     var sourceApp: String? = null,
     //For Storing OCR
     var polishedOcr: String? = null,
+    //For Notes
+    var note: String? = null,
     //For the Delete Functionality
     var isIgnored: Boolean = false,
     // For storing the last time the image was modified
