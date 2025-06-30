@@ -173,8 +173,8 @@ class ModelManagerViewModel @Inject constructor(
     }
 
     fun initializeModel(context: Context, model: Model) {
-        Log.d("ModelManagerViewModel", "Initializing model: ${model.name}")
         updateModelInitializationStatus(model, ModelInitializationStatusType.INITIALIZING)
+        Log.d("ModelManagerViewModel", "Initializing model: ${model.name}")
 
         viewModelScope.launch(Dispatchers.IO) {
             // Updated to use the new LlmChatModelHelper and its callback

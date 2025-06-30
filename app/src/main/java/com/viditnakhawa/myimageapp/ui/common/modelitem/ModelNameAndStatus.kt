@@ -71,8 +71,8 @@ fun ModelNameAndStatus(
                 .fillMaxWidth()
                 .height(16.dp)
                 .padding(top = 8.dp),
-            color = MaterialTheme.colorScheme.primary.copy(alpha = 0.85f),
-            trackColor = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 1.0f),
+            color = MaterialTheme.colorScheme.primary,
+            trackColor = MaterialTheme.colorScheme.surfaceTint.copy(alpha = 0.24f)
         )
     }
 }

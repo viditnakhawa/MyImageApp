@@ -26,9 +26,11 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.core.net.toUri
+import com.viditnakhawa.myimageapp.R
 import com.viditnakhawa.myimageapp.data.Model
 import com.viditnakhawa.myimageapp.data.ModelDownloadStatus
 import com.viditnakhawa.myimageapp.data.ModelDownloadStatusType
@@ -112,6 +114,21 @@ fun ModelItem(
                         Spacer(modifier = Modifier.width(8.dp))
                         Text("Initializing...")
                     }
+                    initializationStatus?.status == ModelInitializationStatusType.ERROR -> {
+                        Column(horizontalAlignment = Alignment.End) {
+                            Text(
+                                "Initialization Failed",
+                                color = MaterialTheme.colorScheme.error,
+                                style = MaterialTheme.typography.labelLarge
+                            )
+                            Text(
+                                initializationStatus.error,
+                                color = MaterialTheme.colorScheme.error,
+                                style = MaterialTheme.typography.labelSmall,
+                                textAlign = TextAlign.End
+                            )
+                        }
+                    }
                     isInitialized -> {
                         Button(onClick = onTryItClicked, enabled = true) {
                             Icon(Icons.AutoMirrored.Filled.ArrowForward, null)
@@ -129,7 +146,7 @@ fun ModelItem(
                             onClick = onDownloadClicked,
                             enabled = downloadStatus?.status == ModelDownloadStatusType.NOT_DOWNLOADED || downloadStatus?.status == ModelDownloadStatusType.FAILED
                         ) {
-                            Text("Download")
+                            Text(stringResource(id = R.string.download))
                         }
                     }
                 }
